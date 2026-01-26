@@ -23,6 +23,9 @@ const yahooFinance = require("yahoo-finance2").default;
 const app = express();
 app.set("view engine", "ejs");
 
+
+
+
 /****************************************************
  * CONFIGURATION & SECURITY
  ****************************************************/

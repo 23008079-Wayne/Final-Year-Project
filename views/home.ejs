@@ -297,6 +297,13 @@
     }
 
     .btn:hover{ background:#151515; }
+    .purchase-btn{
+      border:1px solid #00eaff;
+    }
+    .purchase-btn:hover{
+      background:#0f1a1c;
+    }
+
 
     .spark-wrap{
       height: 110px;
@@ -390,7 +397,7 @@
   </div>
 
   <div class="hero">
-    <h1>Market Overview</h1>
+    <h1>Overview</h1>
     <p>
       A data-visualisation dashboard designed to help users understand market movements.
       It provides charts and summaries for learning and monitoring — it does not automate trades or provide financial advice.
@@ -537,12 +544,12 @@
 
     <div class="panel">
       <div class="panel-header">
-        <h2>Watchlist / Stocks</h2>
+        <h2>Stocks</h2>
         <span>Page <%= page %> of <%= totalPages %></span>
       </div>
 
       <div class="cards">
-        <% results.forEach(item => {
+        <% results.forEach(item => {  
           const change = item.quote?.d ?? 0;
           const percent = item.quote?.dp ?? 0;
           const price = item.quote?.c ?? 0;
@@ -572,8 +579,35 @@
 
             <div class="actions">
               <a class="btn" href="/chart/<%= item.symbol %>">Full Chart</a>
-              <a class="btn" href="/portfolio">Portfolio</a>
+              <!-- ✅ MAS note: Purchase is a simulated UI action (no real trade execution) -->
+              <button class="btn purchase-btn"
+                      type="button"
+                      data-symbol="<%= item.symbol %>"
+                      data-price="<%= Number(price).toFixed(2) %>">
+                Purchase
+              </button>
             </div>
+            <script>
+              // =========================================================
+              // PURCHASE (SIMULATED) ACTION
+              // MAS: No trade execution, human-in-the-loop confirmation
+              // =========================================================
+              document.addEventListener("click", (e) => {
+                const btn = e.target.closest(".purchase-btn");
+                if(!btn) return;
+
+                const symbol = btn.dataset.symbol || "—";
+                const price  = btn.dataset.price || "—";
+
+                alert(
+                  `Purchase Request (Simulation)\n\n` +
+                  `Stock: ${symbol}\n` +
+                  `Shown Price: $${price}\n\n` +
+                  `This is a student prototype.\nNo real trade is executed.`
+                );
+              });
+            </script>
+
 
             <script>
               (function(){
