@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Portfolio Dashboard</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #0d0d0d;
+            margin: 0;
+            padding: 0;
+            font-family: "Inter", sans-serif;
+            color: #eee;
+        }
+
+        .header {
+            padding: 25px 40px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            font-size: 26px;
+            font-weight: 500;
+        }
+
+        .container {
+            padding: 35px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        .summary-card,
+        .table-card,
+        .right-card {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 14px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.05);
+        }
+
+        .summary-value {
+            font-size: 40px;
+            margin: 0;
+        }
+
+        .positive { color: #4caf50; }
+        .negative { color: #e53935; }
+
+        table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+        }
+
+        td {
+            padding: 12px 5px;
+            border-bottom: 1px solid #222;
+            color: #ccc;
+        }
+
+        canvas {
+            margin-top: 25px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- PAGE HEADER -->
+    <div class="header">📊 My Portfolio</div>
+
+    <div class="container">
+
+        <!-- LEFT SIDE SUMMARY & HOLDINGS -->
+        <div>
+
+            <!-- STATIC SUMMARY CARD -->
+            <div class="summary-card">
+                <h2>Total Portfolio Value</h2>
+
+                <!-- This value updates LIVE with JS -->
+                <p id="liveValue" class="summary-value">
+                    $<%= portfolio.totalValue.toLocaleString() %>
+                </p>
+
+                <p class="<%= portfolio.dailyChange >= 0 ? 'positive' : 'negative' %>">
+                    <%= portfolio.dailyChange >= 0 ? '+' : '' %><%= portfolio.dailyChange %> 
+                    (<%= portfolio.dailyPercent %>%)
+                </p>
+            </div>
+
+            <!-- HOLDINGS TABLE -->
+            <div class="table-card">
+                <h2>Current Positions</h2>
+
+                <table>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Qty</th>
+                        <th>Avg Price</th>
+                    </tr>
+
+                    <% portfolio.holdings.forEach(item => { %>
+                        <tr>
+                            <td><%= item.symbol %></td>
+                            <td><%= item.qty %></td>
+                            <td>$<%= item.avg %></td>
+                        </tr>
+                    <% }) %>
+                </table>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE CHARTS -->
+        <div>
+
+            <!-- ALLOCATION CHART (NOW STOCK-BASED) -->
+            <div class="right-card">
+                <h2>Stock Allocation</h2>
+                <canvas id="sectorChart"></canvas>
+            </div>
+
+            <!-- LIVE TREND CHART -->
+            <div class="right-card">
+                <h2>Portfolio Performance (Live)</h2>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- REAL-TIME CHART LOGIC -->
+    <script>
+        const sectorCtx = document.getElementById("sectorChart").getContext("2d");
+        const trendCtx = document.getElementById("trendChart").getContext("2d");
+        const liveValueText = document.getElementById("liveValue");
+
+        // ===== SECTOR (STOCK ALLOCATION) DONUT CHART =====
+        let sectorChart = new Chart(sectorCtx, {
+            type: "doughnut",
+            data: {
+                labels: [],           // stays empty until live fetch
+                datasets: [{
+                    data: [],         // stays empty
+                    backgroundColor: ["#4caf50", "#03a9f4", "#ff9800", "#e91e63", "#9c27b0"]
+                }]
+            }
+        });
+
+        // ===== PORTFOLIO TREND (LIVE LINE CHART) =====
+        let trendChart = new Chart(trendCtx, {
+            type: "line",
+            data: {
+                labels: [],        // filled live
+                datasets: [{
+                    label: "Portfolio Value",
+                    data: [],
+                    borderColor: "#00eaff",
+                    borderWidth: 3,
+                    tension: 0.3
+                }]
+            },
+            options: { animation: false }
+        });
+
+        // ===== FETCH LIVE DATA =====
+        async function fetchLivePortfolio() {
+            const res = await fetch("/api/portfolio-live");
+            const data = await res.json();
+
+            if (!data || data.error) return;
+
+            // --- Update live total value ---
+            liveValueText.innerText = "$" + data.totalValue.toLocaleString();
+
+            // --------------------------------------------------------------------
+            // --- FIXED STOCK ALLOCATION DONUT: FULL HARD RESET EVERY REFRESH ---
+            // --------------------------------------------------------------------
+            sectorChart.data.labels = data.allocation.map(a => a.symbol);
+
+            // Replace dataset entirely to avoid stale values (critical fix)
+            sectorChart.data.datasets = [{
+                data: data.allocation.map(a => a.value),
+                backgroundColor: ["#4caf50", "#03a9f4", "#ff9800", "#e91e63", "#9c27b0"]
+            }];
+
+            sectorChart.update();
+
+            // --- Update trend chart (live portfolio value) ---
+            const timeNow = new Date().toLocaleTimeString();
+            trendChart.data.labels.push(timeNow);
+            trendChart.data.datasets[0].data.push(data.totalValue);
+
+            // keep only last 20 points
+            if (trendChart.data.labels.length > 20) {
+                trendChart.data.labels.shift();
+                trendChart.data.datasets[0].data.shift();
+            }
+
+            trendChart.update();
+        }
+
+        // Initial immediate fetch
+        fetchLivePortfolio();
+
+        // Update every 3 seconds (faster, smoother)
+        setInterval(fetchLivePortfolio, 3000);
+    </script>
+
+</body>
+</html>
