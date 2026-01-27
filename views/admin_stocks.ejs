@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <style>
+    .page-header {
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .tab-navigation {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary-color);
+    }
+
+    .tab-btn.active {
+      color: var(--secondary-color);
+      border-bottom-color: var(--secondary-color);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .stock-freeze-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stock-freeze-info {
+      flex: 1;
+    }
+
+    .stock-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .stock-meta {
+      display: flex;
+      gap: 2rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .stock-status {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .status-active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+
+    .status-frozen {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+
+    .report-filters {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .filter-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .report-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .report-username {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .report-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .detail-box {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 4px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+
+    .detail-val {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    .warning-badge {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5 mb-5">
+    <div class="page-header">
+      <h1 style="margin: 0; color: var(--text-primary);">
+        <i class="fas fa-chart-bar"></i> Stock Management
+      </h1>
+      <p style="color: var(--text-secondary); margin-top: 0.5rem;">Manage user stocks and view compliance reports</p>
+    </div>
+
+    <%- include('partials/messages') %>
+
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+      <button class="tab-btn active" onclick="switchTab('stocks')">
+        <i class="fas fa-lock"></i> Freeze Stocks
+      </button>
+      <button class="tab-btn" onclick="switchTab('reports')">
+        <i class="fas fa-file-alt"></i> Excess Holdings Report
+      </button>
+    </div>
+
+    <!-- Tab 1: Freeze Stocks -->
+    <div id="stocks" class="tab-content active">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0; color: var(--text-primary);">Active Stocks</h3>
+        <input 
+          type="text" 
+          class="form-control" 
+          style="max-width: 300px;"
+          placeholder="Search by stock symbol..."
+        >
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-message">
+        <div class="empty-icon">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <h4 style="color: var(--text-primary);">No Stocks Found</h4>
+        <p>There are no stocks in the system yet. Once users add stocks to their portfolio, they will appear here.</p>
+      </div>
+
+      <!-- Stock Cards Example (for when data is available) -->
+      <!--
+      <div class="stock-freeze-card">
+        <div class="stock-freeze-info">
+          <div class="stock-name">Apple Inc. (AAPL)</div>
+          <div class="stock-meta">
+            <span><strong>Symbol:</strong> AAPL</span>
+            <span><strong>Current Price:</strong> $150.25</span>
+            <span><strong>Active Holdings:</strong> 125 users</span>
+          </div>
+        </div>
+        <div class="stock-status">
+          <span class="status-badge status-active">
+            <i class="fas fa-check-circle"></i> Active
+          </span>
+          <button class="btn btn-sm btn-warning">
+            <i class="fas fa-lock"></i> Freeze Stock
+          </button>
+        </div>
+      </div>
+
+      <div class="stock-freeze-card">
+        <div class="stock-freeze-info">
+          <div class="stock-name">Tesla Inc. (TSLA)</div>
+          <div class="stock-meta">
+            <span><strong>Symbol:</strong> TSLA</span>
+            <span><strong>Current Price:</strong> $245.80</span>
+            <span><strong>Active Holdings:</strong> 98 users</span>
+          </div>
+        </div>
+        <div class="stock-status">
+          <span class="status-badge status-frozen">
+            <i class="fas fa-ban"></i> Frozen
+          </span>
+          <button class="btn btn-sm btn-success">
+            <i class="fas fa-unlock"></i> Unfreeze Stock
+          </button>
+        </div>
+      </div>
+      -->
+    </div>
+
+    <!-- Tab 2: Excess Holdings Report -->
+    <div id="reports" class="tab-content">
+      <h3 style="color: var(--text-primary); margin-bottom: 1.5rem;">
+        <i class="fas fa-exclamation-triangle"></i> Users Exceeding Stock Limits
+      </h3>
+
+      <!-- Filters -->
+      <div class="report-filters">
+        <div class="filter-group">
+          <div>
+            <label class="form-label">Minimum Holdings</label>
+            <input type="number" class="form-control" placeholder="e.g., 1000" value="1000">
+          </div>
+          <div>
+            <label class="form-label">Stock Type</label>
+            <select class="form-control">
+              <option>All Stocks</option>
+              <option>Technology</option>
+              <option>Finance</option>
+              <option>Healthcare</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Date Range</label>
+            <input type="date" class="form-control">
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <button class="btn btn-primary w-100">
+              <i class="fas fa-filter"></i> Apply Filters
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+          <button class="btn btn-outline-primary">
+            <i class="fas fa-download"></i> Export Report
+          </button>
+          <button class="btn btn-outline-primary">
+            <i class="fas fa-print"></i> Print
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-message">
+        <div class="empty-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <h4 style="color: var(--text-primary);">No Violations Found</h4>
+        <p>No users are currently exceeding the stock holding limits.</p>
+      </div>
+
+      <!-- Report Cards Example (for when data is available) -->
+      <!--
+      <div class="report-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div class="report-username">john_doe</div>
+            <p style="color: var(--text-secondary); margin: 0.5rem 0;">john@example.com</p>
+          </div>
+          <span class="warning-badge">
+            <i class="fas fa-exclamation-circle"></i> Exceeds Limit
+          </span>
+        </div>
+
+        <div class="report-details">
+          <div class="detail-box">
+            <div class="detail-label">Total Holdings</div>
+            <div class="detail-val">5,250</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Limit</div>
+            <div class="detail-val">5,000</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Excess</div>
+            <div class="detail-val" style="color: #ef4444;">+250</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">% Over Limit</div>
+            <div class="detail-val" style="color: #ef4444;">5%</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-sm btn-primary">
+            <i class="fas fa-eye"></i> View Details
+          </button>
+          <button class="btn btn-sm btn-warning">
+            <i class="fas fa-bell"></i> Notify User
+          </button>
+          <button class="btn btn-sm btn-danger">
+            <i class="fas fa-ban"></i> Freeze Account
+          </button>
+        </div>
+      </div>
+
+      <div class="report-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div class="report-username">jane_smith</div>
+            <p style="color: var(--text-secondary); margin: 0.5rem 0;">jane@example.com</p>
+          </div>
+          <span class="warning-badge">
+            <i class="fas fa-exclamation-circle"></i> Exceeds Limit
+          </span>
+        </div>
+
+        <div class="report-details">
+          <div class="detail-box">
+            <div class="detail-label">Total Holdings</div>
+            <div class="detail-val">8,750</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Limit</div>
+            <div class="detail-val">5,000</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">Excess</div>
+            <div class="detail-val" style="color: #ef4444;">+3,750</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label">% Over Limit</div>
+            <div class="detail-val" style="color: #ef4444;">75%</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-sm btn-primary">
+            <i class="fas fa-eye"></i> View Details
+          </button>
+          <button class="btn btn-sm btn-warning">
+            <i class="fas fa-bell"></i> Notify User
+          </button>
+          <button class="btn btn-sm btn-danger">
+            <i class="fas fa-ban"></i> Freeze Account
+          </button>
+        </div>
+      </div>
+      -->
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+
+      // Remove active class from all buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Show selected tab
+      document.getElementById(tabName).classList.add('active');
+
+      // Add active class to clicked button
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

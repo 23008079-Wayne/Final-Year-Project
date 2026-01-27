@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>StockAI Terminal – Market Dashboard</title>
+  <title>Market Dashboard</title>
+  <%- include('partials/head') %>
 
   <!-- =========================================================
        Chart.js
@@ -76,7 +77,7 @@
 
     .ticker-wrap{
       position: sticky;
-      top: var(--nav-height);
+      top: 0;
       z-index:15;
 
       height: var(--ticker-height);
@@ -383,10 +384,13 @@
 
 <body>
 
+  <%- include('partials/navbar') %>
+
   <div class="nav">
-    <div class="brand">📊 StockAI Terminal</div>
+    <div class="brand">📊 Market Dashboard</div>
     <div class="nav-links">
-      <a href="/market" class="cta">Market</a>
+      <a href="/" class="cta">Dashboard</a>
+      <a href="/market">Market</a>
       <a href="/portfolio">Portfolio</a>
       <a href="#mas">MAS Disclosures</a>
     </div>

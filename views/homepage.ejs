@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5">
+    <%- include('partials/messages') %>
+    
+    <div class="hero-section">
+      <h1>📊 Marketmind</h1>
+      <p>Professional stock information management platform. Track, analyze, and manage your portfolio with ease and security.</p>
+      <% if (!currentUser) { %>
+        <div style="margin-top: 2rem;">
+          <a href="/register" class="btn btn-light" style="color: var(--primary-color); margin-right: 1rem; font-weight: 600;">Get Started</a>
+          <a href="/login" class="btn btn-outline-light" style="font-weight: 600;">Sign In</a>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="row mt-5">
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">📈</div>
+            <h5 class="card-title">Stock Management</h5>
+            <p class="card-text">Easily manage and track stock information with our intuitive and powerful interface. Real-time data and comprehensive analytics at your fingertips.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">👤</div>
+            <h5 class="card-title">Profile Management</h5>
+            <p class="card-text">Update your profile, upload your avatar, and manage your personal information securely. Complete control over your account.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">🔐</div>
+            <h5 class="card-title">Secure Authentication</h5>
+            <p class="card-text">Sign up and log in securely with our enterprise-grade authentication system. Your data is protected with the latest security standards.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div style="font-size: 2.5rem; margin-bottom: 1rem;">⚙️</div>
+            <h5 class="card-title">Admin Dashboard</h5>
+            <p class="card-text">Comprehensive administrator tools for managing users and system statistics. Full control and visibility over your platform.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin: 4rem 0; border-color: var(--border-color);">
+
+    <!-- Feature highlights -->
+    <div class="row">
+      <div class="col-12 mb-4">
+        <h2 style="text-align: center; color: var(--text-primary); margin-bottom: 3rem;">Why Choose Marketmind?</h2>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-4 text-center">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚡</div>
+        <h5 style="color: var(--text-primary);">Lightning Fast</h5>
+        <p style="color: var(--text-secondary);">Optimized for speed and performance, ensuring quick response times and smooth interactions.</p>
+      </div>
+      <div class="col-md-4 mb-4 text-center">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🛡️</div>
+        <h5 style="color: var(--text-primary);">Bank-Grade Security</h5>
+        <p style="color: var(--text-secondary);">Industry-leading security protocols to protect your sensitive financial information.</p>
+      </div>
+      <div class="col-md-4 mb-4 text-center">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
+        <h5 style="color: var(--text-primary);">Fully Responsive</h5>
+        <p style="color: var(--text-secondary);">Access your portfolio from any device. Optimized for desktop, tablet, and mobile.</p>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

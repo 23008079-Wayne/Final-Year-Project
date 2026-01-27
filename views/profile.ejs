@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5 mb-5" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>My Profile</h2>
+      <a href="/profile/risk" class="btn btn-info btn-sm">View Investment Profile</a>
+    </div>
+    <%- include('partials/messages') %>
+
+    <!-- PROFILE DETAILS CARD -->
+    <div class="card mt-3 mb-5">
+      <div class="card-header">
+        <h5>Profile Information</h5>
+      </div>
+      <div class="card-body">
+        <!-- enctype for file upload -->
+        <form action="/profile" method="POST" enctype="multipart/form-data" class="mt-3">
+
+          <!-- Avatar Section -->
+          <div class="mb-5 text-center">
+            <% if (userProfile.avatar) { %>
+              <img 
+                src="/uploads/<%= userProfile.avatar %>" 
+                alt="Profile Picture"
+                class="profile-avatar mb-3">
+            <% } else { %>
+              <img 
+                src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                class="profile-avatar avatar-placeholder mb-3"
+                alt="Default Profile Picture">
+            <% } %>
+
+            <div class="mt-3 text-start" style="max-width: 350px; margin: 0 auto;">
+              <label class="form-label">Change Profile Picture</label>
+              <input 
+                type="file" 
+                name="avatar" 
+                class="form-control"
+                accept=".jpg,.jpeg,.png">
+              <small class="text-muted">Max 2MB, JPG or PNG only</small>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Full Name -->
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input 
+              type="text" 
+              name="fullName" 
+              class="form-control"
+              required
+              minlength="2"
+              maxlength="100"
+              pattern="^[A-Za-z\s]+$"
+              title="Full name should only contain letters and spaces."
+              value="<%= userProfile.fullName || '' %>"
+              placeholder="Enter your full name">
+          </div>
+
+          <!-- Username (editable) -->
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input 
+              type="text" 
+              name="username" 
+              class="form-control"
+              required
+              minlength="3"
+              maxlength="20"
+              pattern="^[A-Za-z0-9_]{3,20}$"
+              title="3–20 characters. Only letters, numbers, and underscores are allowed."
+              value="<%= userProfile.username %>"
+              placeholder="Enter your username">
+          </div>
+
+          <!-- Email -->
+          <div class="mb-3">
+            <label class="form-label">Email Address</label>
+            <input 
+              type="text" 
+              name="email" 
+              id="profileEmailInput"
+              class="form-control"
+              required
+              pattern="^[^\s@]+@gmail\.com$"
+              title="Email must be a Gmail address (@gmail.com)"
+              value="<%= userProfile.email %>"
+              placeholder="Enter your Gmail address">
+          </div>
+
+          <!-- Bio -->
+          <div class="mb-3">
+            <label class="form-label">Bio</label>
+            <textarea 
+              name="bio" 
+              class="form-control" 
+              rows="3"
+              maxlength="300"
+              placeholder="Tell us about yourself"><%= userProfile.bio || '' %></textarea>
+            <small class="text-muted">Max 300 characters</small>
+          </div>
+
+          <!-- Phone -->
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input 
+              type="text" 
+              name="phone" 
+              class="form-control"
+              required
+              pattern="^[0-9]{8,15}$"
+              title="Phone number must be 8–15 digits, numbers only."
+              value="<%= userProfile.phone || '' %>"
+              placeholder="Enter your phone number">
+          </div>
+
+          <!-- Address -->
+          <div class="mb-3">
+            <label class="form-label">Address</label>
+            <textarea 
+              name="address" 
+              class="form-control" 
+              rows="2"
+              required
+              minlength="5"
+              maxlength="200"
+              placeholder="Enter your address"><%= userProfile.address || '' %></textarea>
+          </div>
+
+          <!-- MetaMask Wallet -->
+          <div class="mb-4">
+            <label class="form-label">MetaMask Wallet Address</label>
+            <div class="input-group">
+              <input 
+                type="text" 
+                name="walletAddress" 
+                id="walletInput"
+                class="form-control"
+                pattern="^0x[a-fA-F0-9]{40}$"
+                title="Valid Ethereum wallet address (0x followed by 40 hex characters)"
+                value="<%= userProfile.walletAddress || '' %>"
+                placeholder="0x... (paste your MetaMask wallet address)"
+                readonly>
+              <button class="btn btn-success" type="button" id="connectWalletBtn" style="font-weight: 600;">
+                <i class="fas fa-wallet"></i> Connect MetaMask
+              </button>
+              <button class="btn btn-danger" type="button" id="removeWalletBtn" style="display: none; font-weight: 600;">
+                <i class="fas fa-trash"></i> Remove
+              </button>
+            </div>
+            <small class="text-muted d-block mt-2">Optional: Connect your MetaMask wallet for blockchain features</small>
+            
+            <!-- Wallet Balance Section -->
+            <div id="walletBalanceSection" class="mt-3" style="display: none;">
+              <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                  <h6 class="card-title mb-0">✓ Wallet Connected</h6>
+                </div>
+                <div class="card-body">
+                  <p class="mb-2"><small class="text-muted">Balance</small></p>
+                  <h4 class="mb-0"><strong id="walletBalance">--</strong> <span style="font-size: 0.8em; color: #666;">ETH</span></h4>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            💾 Save Profile Changes
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- CHANGE PASSWORD CARD -->
+    <div class="card mb-5">
+      <div class="card-header">
+        <h5>Change Password</h5>
+      </div>
+      <div class="card-body">
+        <form action="/profile/password" method="POST" id="passwordForm">
+
+          <div class="mb-3">
+            <label class="form-label">Current Password</label>
+            <input 
+              type="password" 
+              name="currentPassword" 
+              class="form-control" 
+              required
+              placeholder="Enter your current password">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <input 
+              type="password" 
+              name="newPassword" 
+              id="newPassword"
+              class="form-control"
+              required
+              minlength="8"
+              pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+              title="Password must be at least 8 characters, and include uppercase, lowercase, number, and special character."
+              placeholder="Create a strong password">
+            <small class="text-muted d-block mt-2">
+              Must be at least 8 characters with uppercase, lowercase, number, and special character
+            </small>
+
+            <!-- Password strength meter -->
+            <div class="mt-3">
+              <div class="progress" style="height: 6px; background-color: #e2e8f0;">
+                <div 
+                  id="passwordStrengthBar" 
+                  class="progress-bar" 
+                  role="progressbar" 
+                  style="width: 0%; background-color: #ef4444;"></div>
+              </div>
+              <small id="passwordStrengthText" class="text-muted d-block mt-1"></small>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Confirm New Password</label>
+            <input 
+              type="password" 
+              name="confirmPassword" 
+              id="confirmPassword"
+              class="form-control" 
+              required
+              placeholder="Confirm your new password">
+            <small id="passwordMatchText" class="text-muted d-block mt-1"></small>
+          </div>
+
+          <button type="submit" class="btn btn-warning w-100">
+            🔐 Update Password
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Password strength + match JS -->
+  <script>
+    (function () {
+      const passwordInput = document.getElementById('newPassword');
+      const confirmInput = document.getElementById('confirmPassword');
+      const strengthBar = document.getElementById('passwordStrengthBar');
+      const strengthText = document.getElementById('passwordStrengthText');
+      const matchText = document.getElementById('passwordMatchText');
+
+      if (!passwordInput || !strengthBar) return;
+
+      function evaluateStrength(password) {
+        let score = 0;
+        if (!password) return 0;
+
+        if (password.length >= 8) score++;
+        if (/[a-z]/.test(password)) score++;
+        if (/[A-Z]/.test(password)) score++;
+        if (/\d/.test(password)) score++;
+        if (/[@$!%*?&]/.test(password)) score++;
+
+        return score;
+      }
+
+      function updateStrengthMeter() {
+        const pwd = passwordInput.value;
+        const score = evaluateStrength(pwd);
+
+        let width = 0;
+        let label = '';
+        let barColor = '#ef4444';
+
+        if (score <= 1) {
+          width = 20;
+          label = 'Very weak';
+          barColor = '#ef4444';
+        } else if (score === 2) {
+          width = 40;
+          label = 'Weak';
+          barColor = '#ef4444';
+        } else if (score === 3) {
+          width = 60;
+          label = 'Moderate';
+          barColor = '#f59e0b';
+        } else if (score === 4) {
+          width = 80;
+          label = 'Strong';
+          barColor = '#10b981';
+        } else if (score >= 5) {
+          width = 100;
+          label = 'Very strong';
+          barColor = '#10b981';
+        }
+
+        strengthBar.style.width = width + '%';
+        strengthBar.style.backgroundColor = barColor;
+        strengthText.textContent = pwd ? ('Strength: ' + label) : '';
+        strengthText.style.color = barColor;
+      }
+
+      function updateMatchText() {
+        const pwd = passwordInput.value;
+        const confirm = confirmInput.value;
+
+        if (!confirm && !pwd) {
+          matchText.textContent = '';
+          matchText.className = 'text-muted d-block mt-1';
+          return;
+        }
+
+        if (pwd && confirm && pwd === confirm) {
+          matchText.textContent = '✓ Passwords match';
+          matchText.className = 'text-success d-block mt-1';
+          matchText.style.color = '#10b981';
+        } else if (confirm) {
+          matchText.textContent = '✗ Passwords do not match';
+          matchText.className = 'text-danger d-block mt-1';
+          matchText.style.color = '#ef4444';
+        }
+      }
+
+      passwordInput.addEventListener('input', function () {
+        updateStrengthMeter();
+        updateMatchText();
+      });
+
+      if (confirmInput) {
+        confirmInput.addEventListener('input', updateMatchText);
+      }
+
+      // Restrict email to gmail.com only in profile form
+      const profileEmailInput = document.getElementById('profileEmailInput');
+      if (profileEmailInput) {
+        profileEmailInput.addEventListener('input', function (e) {
+          let value = this.value.toLowerCase();
+          
+          // Remove any character that's not valid for email
+          value = value.replace(/[^a-z0-9@._+-]/g, '');
+          
+          // Only allow one @ symbol
+          const atCount = (value.match(/@/g) || []).length;
+          if (atCount > 1) {
+            const parts = value.split('@');
+            value = parts[0] + '@' + parts.slice(1).join('');
+          }
+          
+          // If @ exists, ensure domain is gmail.com
+          if (value.includes('@')) {
+            const [name, domain] = value.split('@');
+            if (!domain.startsWith('gmail.com')) {
+              if (domain.length > 9) {
+                // Keep only gmail.com if user tries to type something else
+                this.value = name + '@gmail.com';
+              } else {
+                // Allow user to type gmail part
+                const validDomain = domain.substring(0, 9);
+                this.value = name + '@' + validDomain;
+              }
+            } else {
+              this.value = name + '@gmail.com';
+            }
+          } else {
+            this.value = value;
+          }
+        });
+      }
+    })();
+
+    // MetaMask Connect and Balance Display
+    const connectWalletBtn = document.getElementById('connectWalletBtn');
+    const removeWalletBtn = document.getElementById('removeWalletBtn');
+    const walletInput = document.getElementById('walletInput');
+    const walletBalanceSection = document.getElementById('walletBalanceSection');
+    const walletBalanceDisplay = document.getElementById('walletBalance');
+
+    // Function to update remove button visibility
+    function updateRemoveButtonVisibility() {
+      if (walletInput.value && walletInput.value.match(/^0x[a-fA-F0-9]{40}$/)) {
+        removeWalletBtn.style.display = 'block';
+      } else {
+        removeWalletBtn.style.display = 'none';
+      }
+    }
+
+    // Check on page load
+    updateRemoveButtonVisibility();
+
+    // Function to get wallet balance
+    async function getWalletBalance(address) {
+      try {
+        if (!window.ethereum) {
+          console.error('MetaMask not installed');
+          return null;
+        }
+        const balance = await window.ethereum.request({
+          method: 'eth_getBalance',
+          params: [address, 'latest']
+        });
+        // Convert from Wei to ETH (1 ETH = 10^18 Wei)
+        const ethBalance = parseInt(balance, 16) / 1e18;
+        return ethBalance.toFixed(4);
+      } catch (error) {
+        console.error('Error getting balance:', error);
+        return null;
+      }
+    }
+
+    // Function to display wallet balance
+    async function displayWalletBalance() {
+      const address = walletInput.value;
+      if (address && address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        const balance = await getWalletBalance(address);
+        if (balance) {
+          walletBalanceDisplay.textContent = balance;
+          walletBalanceSection.style.display = 'block';
+        }
+      }
+    }
+
+    // Show balance if wallet already connected
+    if (walletInput.value) {
+      displayWalletBalance();
+    }
+
+    if (connectWalletBtn) {
+      connectWalletBtn.addEventListener('click', async function() {
+        if (!window.ethereum) {
+          alert('MetaMask is not installed. Please install MetaMask to connect your wallet.');
+          return;
+        }
+
+        try {
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          
+          if (accounts && accounts.length > 0) {
+            walletInput.value = accounts[0];
+            
+            // Show nice success notification
+            const successMsg = document.createElement('div');
+            successMsg.className = 'alert alert-success alert-dismissible fade show';
+            successMsg.innerHTML = `
+              <strong>✓ Success!</strong> MetaMask wallet connected successfully.<br>
+              <small>${accounts[0]}</small>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            walletInput.parentElement.parentElement.insertBefore(successMsg, walletInput.parentElement.nextSibling);
+            
+            // Update remove button visibility
+            updateRemoveButtonVisibility();
+            
+            // Display balance
+            await displayWalletBalance();
+          }
+        } catch (error) {
+          console.error('Error connecting wallet:', error);
+          alert('Failed to connect MetaMask wallet');
+        }
+      });
+    }
+
+    // Remove wallet button
+    if (removeWalletBtn) {
+      removeWalletBtn.addEventListener('click', async function() {
+        if (confirm('Are you sure you want to remove your MetaMask wallet connection?')) {
+          try {
+            const response = await fetch('/profile/wallet/remove', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              walletInput.value = '';
+              walletBalanceSection.style.display = 'none';
+              updateRemoveButtonVisibility();
+              
+              // Show nice success notification
+              const successMsg = document.createElement('div');
+              successMsg.className = 'alert alert-danger alert-dismissible fade show';
+              successMsg.innerHTML = `
+                <strong>✓ Removed!</strong> MetaMask wallet has been disconnected.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              `;
+              walletInput.parentElement.parentElement.insertBefore(successMsg, walletInput.parentElement.nextSibling);
+              
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              alert('Failed to remove wallet');
+            }
+          } catch (error) {
+            console.error('Error removing wallet:', error);
+            alert('Error removing wallet');
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+```

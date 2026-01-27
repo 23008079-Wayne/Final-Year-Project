@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <style>
+    .dashboard-header {
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5">
+    <div class="dashboard-header d-flex justify-content-between align-items-center">
+      <div>
+        <h1 style="margin: 0; color: var(--text-primary);">
+          <i class="fas fa-chart-pie"></i> Admin Dashboard
+        </h1>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">System overview and management</p>
+      </div>
+      <a href="/admin/users" class="btn btn-primary">
+        <i class="fas fa-users"></i> Manage Users
+      </a>
+    </div>
+    
+    <%- include('partials/messages') %>
+
+    <!-- Statistics Cards -->
+    <div class="row mt-4">
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-users" style="color: var(--primary-color);"></i>
+            </div>
+            <h6>Total Users</h6>
+            <h3><%= stats.totalUsers %></h3>
+            <small style="color: var(--text-secondary);">Active users in system</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card stat-green">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-shield-alt" style="color: var(--success-color);"></i>
+            </div>
+            <h6>Admin Accounts</h6>
+            <h3><%= stats.totalAdmins %></h3>
+            <small style="color: var(--text-secondary);">Administrative users</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card stat-orange">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-user-check" style="color: var(--warning-color);"></i>
+            </div>
+            <h6>Complete Profiles</h6>
+            <h3><%= stats.totalProfiles %></h3>
+            <small style="color: var(--text-secondary);">User profiles with data</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card mt-5">
+      <div class="card-header">
+        <h5 style="margin: 0;">
+          <i class="fas fa-tasks"></i> Quick Actions
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <a href="/admin/users" class="btn btn-outline-primary w-100">
+              <i class="fas fa-list"></i> View All Users
+            </a>
+          </div>
+          <div class="col-md-6 mb-3">
+            <a href="/" class="btn btn-outline-secondary w-100">
+              <i class="fas fa-home"></i> Back to Home
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<footer>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <h6 style="color: white; margin-bottom: 1rem;">
+          <i class="fas fa-chart-line"></i> Marketmind
+        </h6>
+        <p style="margin: 0;">Professional stock management platform with enterprise-grade security.</p>
+      </div>
+      <div class="col-md-4 mb-3">
+        <h6 style="color: white; margin-bottom: 1rem;">Features</h6>
+        <p style="margin: 0.5rem 0;"><i class="fas fa-check"></i> Real-time Data</p>
+        <p style="margin: 0.5rem 0;"><i class="fas fa-check"></i> Secure Access</p>
+        <p style="margin: 0.5rem 0;"><i class="fas fa-check"></i> 24/7 Support</p>
+      </div>
+      <div class="col-md-4 mb-3">
+        <h6 style="color: white; margin-bottom: 1rem;">Legal</h6>
+        <p style="margin: 0.5rem 0;"><a href="#" style="color: rgba(255,255,255,0.7);">Privacy Policy</a></p>
+        <p style="margin: 0.5rem 0;"><a href="#" style="color: rgba(255,255,255,0.7);">Terms of Service</a></p>
+      </div>
+    </div>
+    <hr style="border-color: rgba(255,255,255,0.1); margin: 2rem 0;">
+    <div class="row align-items-center">
+      <div class="col-md-6">
+        <p style="margin: 0; font-size: 0.9rem;">© 2025 Marketmind. All rights reserved.</p>
+      </div>
+      <div class="col-md-6 text-end">
+        <p style="margin: 0; font-size: 0.9rem;">Secure • Reliable • Professional</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Inactivity timeout (30 minutes)
+let inactivityTimeout;
+const INACTIVITY_TIME = 30 * 60 * 1000; // 30 minutes
+
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimeout);
+  inactivityTimeout = setTimeout(function() {
+    alert('You have been logged out due to inactivity.');
+    window.location.href = '/logout';
+  }, INACTIVITY_TIME);
+}
+
+// Track user activity only if user is logged in
+if (document.querySelector('a[href="/logout"]')) {
+  document.addEventListener('mousemove', resetInactivityTimer);
+  document.addEventListener('keypress', resetInactivityTimer);
+  document.addEventListener('click', resetInactivityTimer);
+  document.addEventListener('scroll', resetInactivityTimer);
+  
+  // Initialize timer on page load
+  resetInactivityTimer();
+}
+
+// Auto-logout when user closes the page
+window.addEventListener('beforeunload', function(e) {
+  if (document.querySelector('a[href="/logout"]')) {
+    navigator.sendBeacon('/logout');
+  }
+});
+</script>

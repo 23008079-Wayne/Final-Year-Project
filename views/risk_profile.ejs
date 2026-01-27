@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <title>Investment Profile - Marketmind</title>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5 mb-5" style="max-width: 800px;">
+    <h2 class="mb-4">My Investment Profile</h2>
+    <%- include('partials/messages') %>
+
+    <div class="card">
+      <div class="card-header">
+        <h5>Risk Profile Information</h5>
+        <small class="text-muted">Your investment preferences and goals</small>
+      </div>
+      <div class="card-body">
+        <% if (userRisk && userRisk.riskTolerance) { %>
+          <!-- Display View -->
+          <div id="viewMode">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Risk Tolerance</h6>
+                <p class="lead">
+                  <% if (userRisk.riskTolerance === 'conservative') { %>
+                    <span class="badge bg-success">Conservative</span> - Prefer stable, low-risk investments
+                  <% } else if (userRisk.riskTolerance === 'moderate') { %>
+                    <span class="badge bg-warning">Moderate</span> - Willing to take some risk for growth
+                  <% } else if (userRisk.riskTolerance === 'aggressive') { %>
+                    <span class="badge bg-danger">Aggressive</span> - Comfortable with high-risk, high-reward investments
+                  <% } %>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Investment Experience</h6>
+                <p class="lead">
+                  <% if (userRisk.investmentExperience === 'beginner') { %>
+                    <span class="badge bg-primary">Beginner</span> - New to investing
+                  <% } else if (userRisk.investmentExperience === 'intermediate') { %>
+                    <span class="badge bg-info">Intermediate</span> - Some investing experience
+                  <% } else if (userRisk.investmentExperience === 'advanced') { %>
+                    <span class="badge bg-dark">Advanced</span> - Extensive investing knowledge
+                  <% } %>
+                </p>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Age</h6>
+                <p class="lead"><%= userRisk.age || 'Not specified' %></p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Annual Income Level</h6>
+                <p class="lead">
+                  <% if (userRisk.annualIncome) { %>
+                    <%= userRisk.annualIncome.replace(/-/g, ' - $').replace('below', 'Below').replace('above', 'Above').toUpperCase() %>
+                  <% } else { %>
+                    <span class="text-muted">Not specified</span>
+                  <% } %>
+                </p>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Net Worth</h6>
+                <p class="lead">
+                  <% if (userRisk.netWorth) { %>
+                    $<%= parseFloat(userRisk.netWorth).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                  <% } else { %>
+                    <span class="text-muted">Not specified</span>
+                  <% } %>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Investment Goal</h6>
+                <p class="lead"><%= userRisk.investmentGoal %></p>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h6 class="text-muted">Time Horizon</h6>
+                <p class="lead">
+                  <% if (userRisk.timeHorizon === 'short-term') { %>
+                    <strong>Short-term</strong> - Less than 3 years
+                  <% } else if (userRisk.timeHorizon === 'medium-term') { %>
+                    <strong>Medium-term</strong> - 3-7 years
+                  <% } else if (userRisk.timeHorizon === 'long-term') { %>
+                    <strong>Long-term</strong> - 7+ years
+                  <% } %>
+                </p>
+              </div>
+              <div class="col-md-6">
+                <h6 class="text-muted">Last Updated</h6>
+                <p class="lead">
+                  <% 
+                    const date = new Date(userRisk.completedAt);
+                    const formatted = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                  %>
+                  <%= formatted %>
+                </p>
+              </div>
+            </div>
+
+            <hr>
+            <button class="btn btn-primary" id="editBtn">Edit Profile</button>
+          </div>
+
+          <!-- Edit Form (hidden by default) -->
+          <div id="editMode" style="display:none;">
+            <form action="/profile/risk" method="POST">
+              <div class="mb-3">
+                <label class="form-label">What is your risk tolerance?</label>
+                <select name="riskTolerance" class="form-select" required>
+                  <option value="conservative" <%= userRisk.riskTolerance === 'conservative' ? 'selected' : '' %>>Conservative - Prefer stable, low-risk investments</option>
+                  <option value="moderate" <%= userRisk.riskTolerance === 'moderate' ? 'selected' : '' %>>Moderate - Willing to take some risk for growth</option>
+                  <option value="aggressive" <%= userRisk.riskTolerance === 'aggressive' ? 'selected' : '' %>>Aggressive - Comfortable with high-risk, high-reward investments</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">What is your investment experience?</label>
+                <select name="investmentExperience" class="form-select" required>
+                  <option value="beginner" <%= userRisk.investmentExperience === 'beginner' ? 'selected' : '' %>>Beginner - New to investing</option>
+                  <option value="intermediate" <%= userRisk.investmentExperience === 'intermediate' ? 'selected' : '' %>>Intermediate - Some investing experience</option>
+                  <option value="advanced" <%= userRisk.investmentExperience === 'advanced' ? 'selected' : '' %>>Advanced - Extensive investing knowledge</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">What is your age? <span class="text-danger">*</span></label>
+                <input type="number" name="age" class="form-control" placeholder="Enter your age" min="18" max="120" value="<%= userRisk.age || '' %>" required>
+                <small class="text-muted d-block mt-1">You must be at least 18 years old to invest</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">What is your annual income level?</label>
+                <select name="annualIncome" class="form-select">
+                  <option value="" <%= !userRisk.annualIncome ? 'selected' : '' %>>-- Select your income range --</option>
+                  <option value="below-30k" <%= userRisk.annualIncome === 'below-30k' ? 'selected' : '' %>>Below $30,000</option>
+                  <option value="30k-60k" <%= userRisk.annualIncome === '30k-60k' ? 'selected' : '' %>>$30,000 - $60,000</option>
+                  <option value="60k-100k" <%= userRisk.annualIncome === '60k-100k' ? 'selected' : '' %>>$60,000 - $100,000</option>
+                  <option value="100k-200k" <%= userRisk.annualIncome === '100k-200k' ? 'selected' : '' %>>$100,000 - $200,000</option>
+                  <option value="above-200k" <%= userRisk.annualIncome === 'above-200k' ? 'selected' : '' %>>Above $200,000</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">What is your estimated net worth?</label>
+                <input type="number" name="netWorth" step="0.01" class="form-control" placeholder="Enter your estimated net worth ($)" min="0" value="<%= userRisk.netWorth || '' %>">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">What is your primary investment goal?</label>
+                <select name="investmentGoal" class="form-select" required>
+                  <option value="wealth-accumulation" <%= userRisk.investmentGoal === 'wealth-accumulation' ? 'selected' : '' %>>Wealth Accumulation</option>
+                  <option value="retirement-planning" <%= userRisk.investmentGoal === 'retirement-planning' ? 'selected' : '' %>>Retirement Planning</option>
+                  <option value="income-generation" <%= userRisk.investmentGoal === 'income-generation' ? 'selected' : '' %>>Income Generation</option>
+                  <option value="capital-appreciation" <%= userRisk.investmentGoal === 'capital-appreciation' ? 'selected' : '' %>>Capital Appreciation</option>
+                  <option value="short-term-gains" <%= userRisk.investmentGoal === 'short-term-gains' ? 'selected' : '' %>>Short-term Gains</option>
+                  <option value="diversification" <%= userRisk.investmentGoal === 'diversification' ? 'selected' : '' %>>Diversification</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">What is your investment time horizon?</label>
+                <select name="timeHorizon" class="form-select" required>
+                  <option value="short-term" <%= userRisk.timeHorizon === 'short-term' ? 'selected' : '' %>>Short-term (Less than 3 years)</option>
+                  <option value="medium-term" <%= userRisk.timeHorizon === 'medium-term' ? 'selected' : '' %>>Medium-term (3-7 years)</option>
+                  <option value="long-term" <%= userRisk.timeHorizon === 'long-term' ? 'selected' : '' %>>Long-term (7+ years)</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-success me-2">Save Changes</button>
+              <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+            </form>
+          </div>
+
+        <% } else { %>
+          <!-- No Risk Profile Yet -->
+          <p class="text-muted mb-4">You haven't completed your investment profile yet. Please fill it out to get personalized stock recommendations.</p>
+          
+          <form action="/profile/risk" method="POST">
+            <div class="mb-3">
+              <label class="form-label">What is your risk tolerance?</label>
+              <select name="riskTolerance" class="form-select" required>
+                <option value="">-- Select your risk tolerance --</option>
+                <option value="conservative">Conservative - Prefer stable, low-risk investments</option>
+                <option value="moderate">Moderate - Willing to take some risk for growth</option>
+                <option value="aggressive">Aggressive - Comfortable with high-risk, high-reward investments</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">What is your investment experience?</label>
+              <select name="investmentExperience" class="form-select" required>
+                <option value="">-- Select your experience level --</option>
+                <option value="beginner">Beginner - New to investing</option>
+                <option value="intermediate">Intermediate - Some investing experience</option>
+                <option value="advanced">Advanced - Extensive investing knowledge</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">What is your age? <span class="text-danger">*</span></label>
+              <input type="number" name="age" class="form-control" placeholder="Enter your age" min="18" max="120" required>
+              <small class="text-muted d-block mt-1">You must be at least 18 years old to invest</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">What is your annual income level?</label>
+              <select name="annualIncome" class="form-select">
+                <option value="">-- Select your income range --</option>
+                <option value="below-30k">Below $30,000</option>
+                <option value="30k-60k">$30,000 - $60,000</option>
+                <option value="60k-100k">$60,000 - $100,000</option>
+                <option value="100k-200k">$100,000 - $200,000</option>
+                <option value="above-200k">Above $200,000</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">What is your estimated net worth?</label>
+              <input type="number" name="netWorth" step="0.01" class="form-control" placeholder="Enter your estimated net worth ($)" min="0">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">What is your primary investment goal?</label>
+              <select name="investmentGoal" class="form-select" required>
+                <option value="">-- Select your goal --</option>
+                <option value="wealth-accumulation">Wealth Accumulation</option>
+                <option value="retirement-planning">Retirement Planning</option>
+                <option value="income-generation">Income Generation</option>
+                <option value="capital-appreciation">Capital Appreciation</option>
+                <option value="short-term-gains">Short-term Gains</option>
+                <option value="diversification">Diversification</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">What is your investment time horizon?</label>
+              <select name="timeHorizon" class="form-select" required>
+                <option value="">-- Select your time horizon --</option>
+                <option value="short-term">Short-term (Less than 3 years)</option>
+                <option value="medium-term">Medium-term (3-7 years)</option>
+                <option value="long-term">Long-term (7+ years)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Create Investment Profile</button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <a href="/profile" class="btn btn-outline-secondary">Back to Profile</a>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+  
+  <!-- MetaMask Connect Button -->
+  <div class="mt-4">
+    <button id="connectButton" class="btn btn-warning">
+      <img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask" style="width: 22px; vertical-align: middle; margin-right: 6px;"> Connect to MetaMask
+    </button>
+    <button id="disconnectButton" class="btn btn-outline-danger ms-2" style="display:none;">Disconnect Wallet</button>
+    <button id="removeWalletButton" class="btn btn-outline-secondary ms-2" style="display:none;">Remove Wallet Address</button>
+    <div id="walletStatus" class="mt-3"></div>
+    <div id="walletBalance" class="mt-2"></div>
+  </div>
+
+  <script>
+      // Load ethers.js from CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
+      document.head.appendChild(script);
+    const editBtn = document.getElementById('editBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const viewMode = document.getElementById('viewMode');
+    const editMode = document.getElementById('editMode');
+
+    if (editBtn) {
+      editBtn.addEventListener('click', function() {
+        viewMode.style.display = 'none';
+        editMode.style.display = 'block';
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function() {
+        editMode.style.display = 'none';
+        viewMode.style.display = 'block';
+      });
+    }
+    // MetaMask connection logic with disconnect
+    const connectButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
+    const walletStatus = document.getElementById('walletStatus');
+    let connectedAccount = null;
+
+    // If wallet address is present from backend, show as connected and fetch balance
+    <% if (userProfile && userProfile.walletAddress) { %>
+      window.addEventListener('DOMContentLoaded', function() {
+        connectedAccount = '<%= userProfile.walletAddress %>';
+        walletStatus.innerHTML = `<span class="badge bg-success" style="font-size:1rem;"><img src='https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg' style='width:18px;vertical-align:middle;margin-right:4px;'>Connected: <%= userProfile.walletAddress %></span>`;
+        disconnectButton.style.display = 'inline-block';
+        removeWalletButton.style.display = 'inline-block';
+        // Wait for ethers.js to load
+        script.onload = function() {
+          fetchWalletBalance('<%= userProfile.walletAddress %>');
+        };
+      });
+    <% } %>
+    // Remove wallet address from backend
+    const removeWalletButton = document.getElementById('removeWalletButton');
+    if (removeWalletButton) {
+      removeWalletButton.onclick = async () => {
+        if (confirm('Are you sure you want to remove your wallet address?')) {
+          fetch('/profile/remove-wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              walletStatus.innerHTML = '<span class="badge bg-secondary">Wallet address removed.</span>';
+              walletBalance.innerHTML = '';
+              removeWalletButton.style.display = 'none';
+              disconnectButton.style.display = 'none';
+            } else {
+              alert('Failed to remove wallet address.');
+            }
+          });
+        }
+      };
+    }
+
+    // Fetch wallet balance using ethers.js
+    function fetchWalletBalance(address) {
+      if (window.ethers) {
+        const provider = new window.ethers.providers.Web3Provider(window.ethereum, 'any');
+        provider.getBalance(address).then(balance => {
+          const eth = window.ethers.utils.formatEther(balance);
+          walletBalance.innerHTML = `<span class='badge bg-info'>Balance: ${eth} ETH</span>`;
+        }).catch(() => {
+          walletBalance.innerHTML = `<span class='badge bg-warning'>Unable to fetch balance</span>`;
+        });
+      }
+    }
+
+    if (connectButton) {
+      connectButton.onclick = async () => {
+        walletStatus.innerHTML = '';
+        if (window.ethereum) {
+          try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (accounts && accounts.length > 0) {
+              connectedAccount = accounts[0];
+              walletStatus.innerHTML = `<span class="badge bg-success" style="font-size:1rem;"><img src='https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg' style='width:18px;vertical-align:middle;margin-right:4px;'>Connected: ${accounts[0]}</span>`;
+              disconnectButton.style.display = 'inline-block';
+               // Wait for ethers.js to load
+               script.onload = function() {
+                 fetchWalletBalance(accounts[0]);
+               };
+            } else {
+              walletStatus.innerHTML = '<span class="badge bg-warning">No wallet found.</span>';
+              disconnectButton.style.display = 'none';
+               walletBalance.innerHTML = '';
+            }
+          } catch (error) {
+            walletStatus.innerHTML = '<span class="badge bg-danger">Connection rejected.</span>';
+            disconnectButton.style.display = 'none';
+             walletBalance.innerHTML = '';
+          }
+        } else {
+          walletStatus.innerHTML = '<span class="badge bg-danger">MetaMask is not installed. <a href="https://metamask.io/" target="_blank">Install MetaMask</a> to use this feature.</span>';
+          disconnectButton.style.display = 'none';
+           walletBalance.innerHTML = '';
+        }
+      };
+    }
+
+    if (disconnectButton) {
+      disconnectButton.onclick = () => {
+        connectedAccount = null;
+        walletStatus.innerHTML = '<span class="badge bg-secondary">Wallet disconnected.</span>';
+        disconnectButton.style.display = 'none';
+        walletBalance.innerHTML = '';
+      };
+    }
+  </script>
+
+  <!-- Age Validation Script -->
+  <script>
+    (function() {
+      // Get all age inputs on the page (both edit and create forms)
+      const ageInputs = document.querySelectorAll('input[name="age"]');
+      
+      ageInputs.forEach(function(ageInput) {
+        const ageErrorText = document.createElement('small');
+        ageErrorText.className = 'text-danger d-block mt-1';
+        ageErrorText.style.display = 'none';
+        let lastValidAge = '';
+        
+        ageInput.parentNode.appendChild(ageErrorText);
+
+        ageInput.addEventListener('input', function (e) {
+          // Only allow numbers
+          this.value = this.value.replace(/[^0-9]/g, '');
+          
+          const age = parseInt(this.value);
+          
+          if (this.value === '') {
+            ageErrorText.textContent = '';
+            ageErrorText.style.display = 'none';
+            ageInput.style.borderColor = '';
+            ageInput.classList.remove('is-invalid');
+            lastValidAge = '';
+          } else if (age >= 18 && age <= 120) {
+            // Age is valid (18-120) - HIDE ERROR AND RED BORDER COMPLETELY
+            ageErrorText.textContent = '';
+            ageErrorText.style.display = 'none';
+            ageInput.style.borderColor = '';
+            ageInput.classList.remove('is-invalid');
+            lastValidAge = this.value;
+          } else if (age < 18) {
+            // Show error if below 18
+            ageErrorText.textContent = 'You must be at least 18 years old to invest';
+            ageErrorText.style.display = 'block';
+            ageInput.classList.add('is-invalid');
+          } else if (age > 120) {
+            // Restore last valid value if exceeds 120
+            this.value = lastValidAge;
+            ageErrorText.textContent = 'Please enter a valid age';
+            ageErrorText.style.display = 'block';
+            ageInput.classList.add('is-invalid');
+          }
+        });
+
+        // Validate on form submit
+        const form = ageInput.closest('form');
+        if (form) {
+          form.addEventListener('submit', function (e) {
+            const age = parseInt(ageInput.value);
+            if (!ageInput.value || isNaN(age) || age < 18 || age > 120) {
+              e.preventDefault();
+              ageErrorText.textContent = 'You must be at least 18 years old to invest';
+              ageErrorText.style.display = 'block';
+              ageInput.classList.add('is-invalid');
+            }
+          });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
