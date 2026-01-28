@@ -608,4 +608,614 @@
   </script>
 
 </body>
+</html><!DOCTYPE html>
+<html>
+<head>
+  <title><%= symbol %> Chart</title>
+
+  <style>
+    /* =========================================================
+       GLOBAL LAYOUT VARIABLES (same as home.ejs)
+       ========================================================= */
+    :root{
+      --nav-height: 64px;
+      --ticker-height: 44px;
+    }
+
+    body{
+      background:#0b0b0b;
+      margin:0;
+      padding:0;
+      font-family:"Inter", Arial, sans-serif;
+      color:#eee;
+    }
+
+    /* =========================================================
+       NAVBAR (same as home.ejs)
+       ========================================================= */
+    .nav{
+      height: var(--nav-height);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:0 28px;
+
+      background:rgba(15,15,15,0.95);
+      border-bottom:1px solid #222;
+
+      position:sticky;
+      top:0;
+      z-index:20;
+      backdrop-filter: blur(6px);
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      font-weight:700;
+      letter-spacing:0.5px;
+      font-size:18px;
+      color:#00eaff;
+    }
+
+    .nav-links{
+      display:flex;
+      gap:16px;
+      align-items:center;
+    }
+
+    .nav-links a{
+      color:#ddd;
+      text-decoration:none;
+      font-size:14px;
+      padding:8px 12px;
+      border-radius:8px;
+      border:1px solid transparent;
+      transition:0.2s;
+    }
+
+    .nav-links a:hover{
+      border:1px solid #2a2a2a;
+      background:#121212;
+    }
+
+    /* CTA shows active tab */
+    .cta{
+      background:#00eaff;
+      color:#000 !important;
+      font-weight:700;
+    }
+
+    /* =========================================================
+       TICKER BAR (same behavior as home.ejs)
+       - sticky under navbar
+       ========================================================= */
+    .ticker-wrap{
+      position: sticky;
+      top: var(--nav-height);
+      z-index:15;
+
+      height: var(--ticker-height);
+      display:flex;
+      align-items:center;
+
+      background:#0f0f0f;
+      border-bottom:1px solid #222;
+      overflow:hidden;
+      white-space:nowrap;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.25);
+    }
+
+    .ticker{
+      display:inline-flex;
+      align-items:center;
+      gap:20px;
+      padding:10px 28px;
+      will-change: transform;
+      animation: ticker-scroll 22s linear infinite;
+    }
+
+    .ticker-wrap:hover .ticker{
+      animation-play-state: paused;
+    }
+
+    @keyframes ticker-scroll{
+      from{ transform: translateX(0); }
+      to{ transform: translateX(-50%); }
+    }
+
+    .ticker-item{
+      display:inline-flex;
+      align-items:baseline;
+      gap:10px;
+      padding-right:18px;
+      border-right:1px solid rgba(255,255,255,0.08);
+      min-width:190px;
+    }
+
+    .ticker-sym{ font-weight:800; color:#eaeaea; font-size:14px; }
+    .ticker-price{ font-weight:800; color:#fff; font-size:14px; }
+    .ticker-chg{ font-weight:700; font-size:12px; }
+    .t-up{ color:#4caf50; }
+    .t-down{ color:#e53935; }
+
+    /* =========================================================
+       PAGE TITLE AREA + ACTIONS
+       ========================================================= */
+    .title-wrap{
+      max-width:1200px;
+      margin: 18px auto 0;
+      padding: 0 28px;
+    }
+
+    .title{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    .title h1{
+      margin:0;
+      font-size:26px;
+      letter-spacing:0.4px;
+      color:#e6e6e6;
+    }
+
+    .subtitle{
+      margin-top:6px;
+      color:#bdbdbd;
+      font-size:13px;
+      line-height:1.4;
+      max-width:820px;
+    }
+
+    .title-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-top:4px;
+    }
+
+    .btn{
+      display:inline-block;
+      text-decoration:none;
+      font-size:12px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #2a2a2a;
+      color:#ddd;
+      background:#111;
+      transition:0.2s;
+      cursor:pointer;
+    }
+    .btn:hover{ background:#151515; }
+
+    /* ✅ "Purchase" button but MAS-aligned: clearly demo */
+    .btn.primary{
+      background:#00eaff;
+      color:#000;
+      font-weight:800;
+      border:1px solid transparent;
+    }
+
+    .tag{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid #2a2a2a;
+      color:#bdbdbd;
+      background:#0f0f0f;
+      white-space:nowrap;
+    }
+
+    /* =========================================================
+       MAS DISCLOSURE (collapsed by default)
+       ========================================================= */
+    .mas-box{
+      margin-top:14px;
+      background:#101010;
+      border:1px solid #222;
+      border-radius:14px;
+      padding:14px 14px;
+      color:#bdbdbd;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    details summary{
+      cursor:pointer;
+      list-style:none;
+    }
+    details summary::-webkit-details-marker{ display:none; }
+
+    /* =========================================================
+       CHART CONTAINER
+       ========================================================= */
+    .chart-container{
+      max-width:1200px;
+      margin: 18px auto 26px;
+      padding: 0 28px;
+    }
+
+    .chart-panel{
+      height: 78vh;
+      background:#111;
+      border-radius:16px;
+      box-shadow:0 0 30px rgba(0,255,255,0.08);
+      overflow:hidden;
+      border:1px solid #222;
+    }
+
+    #tv_chart_container{
+      width:100%;
+      height:100%;
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+    .footer{
+      border-top:1px solid #222;
+      padding:16px 28px;
+      color:#999;
+      font-size:12px;
+      background:#0f0f0f;
+    }
+
+    /* =========================================================
+       PURCHASE MODAL (MAS: human-in-the-loop + no trade execution)
+       ========================================================= */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,0.65);
+      display:none;              /* hidden by default */
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+      padding:18px;
+    }
+
+    .modal{
+      width:min(560px, 100%);
+      background:#121212;
+      border:1px solid #222;
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 0 24px rgba(0,234,255,0.08);
+    }
+
+    .modal h3{
+      margin:0 0 6px;
+      font-size:16px;
+      color:#eaeaea;
+    }
+
+    .modal p{
+      margin:0;
+      color:#bdbdbd;
+      font-size:13px;
+      line-height:1.55;
+    }
+
+    .modal .row{
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+
+    .field{
+      display:grid;
+      gap:6px;
+      margin-top:12px;
+    }
+
+    label{
+      font-size:12px;
+      color:#bdbdbd;
+    }
+
+    input{
+      background:#0f0f0f;
+      border:1px solid #222;
+      border-radius:10px;
+      padding:10px 12px;
+      color:#eee;
+      outline:none;
+      font-size:13px;
+    }
+
+    .modal-actions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top:14px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =========================================================
+       NAVBAR (same layout as home.ejs)
+       ========================================================= -->
+  <div class="nav">
+    <div class="brand">📊 StockAI Terminal</div>
+    <div class="nav-links">
+      <a href="/">Market</a>
+      <a href="/portfolio">Portfolio</a>
+      <!-- CTA indicates current page -->
+      <a class="cta" href="/chart/<%= symbol %>">Chart</a>
+      <a href="#mas">MAS Disclosures</a>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       TICKER BAR (same as home.ejs, uses /api/ticker)
+       ========================================================= -->
+  <div class="ticker-wrap" aria-label="Live market ticker">
+    <div id="ticker" class="ticker"></div>
+  </div>
+
+  <!-- =========================================================
+       TITLE + ACTIONS
+       ========================================================= -->
+  <div class="title-wrap">
+    <div class="title">
+      <div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <h1>📈 <%= symbol %> – Interactive Chart</h1>
+          <span class="tag">View-only</span>
+          <span class="tag">No trade execution</span>
+        </div>
+
+        <div class="subtitle">
+          This chart is provided for market visualisation and learning. It does not provide investment advice or automate trading actions.
+        </div>
+      </div>
+
+      <div class="title-actions">
+        <!-- ✅ MAS: Purchase is demo-only + requires confirmation -->
+        <button class="btn primary" id="buyBtn">🛒 Purchase (Demo)</button>
+        <a class="btn" href="/">← Back to Market</a>
+      </div>
+    </div>
+
+    <!-- =========================================================
+         MAS DISCLOSURE (collapsed) - anchor matches navbar link
+         ========================================================= -->
+    <div class="mas-box" id="mas">
+      <details>
+        <summary>
+          View MAS-aligned disclosure: data sources, limitations, and user responsibility (click to expand)
+        </summary>
+        <div style="margin-top:10px;">
+          <strong>Disclaimer:</strong> StockAI is informational/educational only and does not provide financial advice.<br><br>
+          <strong>Regulatory Note:</strong> This is a student prototype for learning. It is not a licensed trading platform and does not provide regulated financial services.<br><br>
+          <strong>Data Sources:</strong> TradingView widget for interactive charts; Finnhub (via server APIs) for live quotes displayed on other pages and the ticker.<br><br>
+          <strong>Limitations:</strong> Market data may be delayed, incomplete, or rate-limited (free-tier APIs). Past performance does not guarantee future results.<br><br>
+          <strong>Human-in-the-loop:</strong> The “Purchase (Demo)” button does not execute trades. It only simulates a user action and requires confirmation.
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       CHART
+       ========================================================= -->
+  <div class="chart-container">
+    <div class="chart-panel">
+      <div id="tv_chart_container"></div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       PURCHASE MODAL (MAS-aligned, no execution)
+       ========================================================= -->
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">Purchase (Demo) – <%= symbol %></h3>
+      <p>
+        This is a <strong>simulation</strong> for a student prototype. It does <strong>not</strong> place a real trade.
+        Please confirm your intent before continuing.
+      </p>
+
+      <div class="field">
+        <label for="qtyInput">Quantity (demo input)</label>
+        <input id="qtyInput" type="number" min="1" step="1" value="1" />
+      </div>
+
+      <div class="field">
+        <label>
+          <input id="confirmCheck" type="checkbox" />
+          I understand this is not financial advice and no trade will be executed.
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn" id="cancelBtn">Cancel</button>
+        <button class="btn primary" id="confirmBtn">Confirm (Demo)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TradingView loader -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <!-- TradingView chart configuration -->
+  <script>
+    new TradingView.widget({
+      autosize: true,
+      symbol: "<%= symbol %>",
+      interval: "D",
+      timezone: "Etc/UTC",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      toolbar_bg: "#0b0b0b",
+      enable_publishing: false,
+      withdateranges: true,
+      hide_side_toolbar: false,
+      allow_symbol_change: false,
+      container_id: "tv_chart_container"
+    });
+  </script>
+
+  <div class="footer">
+    Data sources: TradingView (interactive charts), Finnhub (live quotes via server API).<br>
+    StockAI is informational/educational only — not financial advice, no trade execution.
+  </div>
+
+  <script>
+    // =========================================================
+    // ✅ TICKER (same concept as home.ejs)
+    // - Uses ONE endpoint: /api/ticker
+    // - Change REFRESH_MS to slow refresh
+    // =========================================================
+    (function(){
+      const tickerEl = document.getElementById("ticker");
+      if(!tickerEl) return;
+
+      // ✅ Slower refresh helps reduce rate limits
+      const REFRESH_MS = 20000;
+
+      function renderItem(item){
+        if(!item || !item.ok){
+          return `
+            <div class="ticker-item">
+              <span class="ticker-sym">${item?.symbol ?? "—"}</span>
+              <span class="ticker-price">—</span>
+              <span class="ticker-chg">Unavailable</span>
+            </div>
+          `;
+        }
+
+        const price = Number(item.c);
+        const chg   = Number(item.d);
+        const pct   = Number(item.dp);
+
+        const up = Number.isFinite(chg) && chg > 0;
+        const down = Number.isFinite(chg) && chg < 0;
+        const cls = up ? "t-up" : (down ? "t-down" : "");
+
+        const signChg = up ? "+" : "";
+        const signPct = up ? "+" : "";
+
+        return `
+          <div class="ticker-item">
+            <span class="ticker-sym">${item.symbol}</span>
+            <span class="ticker-price">${Number.isFinite(price) ? price.toFixed(2) : "—"}</span>
+            <span class="ticker-chg ${cls}">
+              ${Number.isFinite(chg) ? `${signChg}${chg.toFixed(2)}` : "—"}
+              ${Number.isFinite(pct) ? `(${signPct}${pct.toFixed(2)}%)` : ""}
+            </span>
+          </div>
+        `;
+      }
+
+      async function loadTicker(){
+        try{
+          const r = await fetch(`/api/ticker`);
+          if(!r.ok) throw new Error("Ticker API failed");
+
+          const payload = await r.json();
+          const rows = Array.isArray(payload?.symbols) ? payload.symbols : [];
+
+          if(rows.length === 0){
+            tickerEl.innerHTML = `
+              <div class="ticker-item">
+                <span class="ticker-sym">Ticker</span>
+                <span class="ticker-price">—</span>
+                <span class="ticker-chg">No data</span>
+              </div>
+            `;
+            return;
+          }
+
+          const html = rows.map(renderItem).join("");
+          tickerEl.innerHTML = html + html;
+
+        } catch(e){
+          tickerEl.innerHTML = `
+            <div class="ticker-item">
+              <span class="ticker-sym">Ticker</span>
+              <span class="ticker-price">—</span>
+              <span class="ticker-chg">Error loading</span>
+            </div>
+          `;
+        }
+      }
+
+      loadTicker();
+      setInterval(loadTicker, REFRESH_MS);
+    })();
+  </script>
+
+  <script>
+    // =========================================================
+    // ✅ PURCHASE (DEMO) FLOW — MAS-aligned (human-in-the-loop)
+    // - No trade execution
+    // - Requires explicit user confirmation checkbox
+    // - Redirects to a placeholder URL you can implement later
+    // =========================================================
+    (function(){
+      const buyBtn = document.getElementById("buyBtn");
+      const backdrop = document.getElementById("modalBackdrop");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const confirmBtn = document.getElementById("confirmBtn");
+      const confirmCheck = document.getElementById("confirmCheck");
+      const qtyInput = document.getElementById("qtyInput");
+
+      function openModal(){
+        backdrop.style.display = "flex";
+        backdrop.setAttribute("aria-hidden", "false");
+      }
+
+      function closeModal(){
+        backdrop.style.display = "none";
+        backdrop.setAttribute("aria-hidden", "true");
+        confirmCheck.checked = false;
+      }
+
+      buyBtn?.addEventListener("click", openModal);
+      cancelBtn?.addEventListener("click", closeModal);
+
+      // Click outside modal closes it
+      backdrop?.addEventListener("click", (e) => {
+        if(e.target === backdrop) closeModal();
+      });
+
+      confirmBtn?.addEventListener("click", () => {
+        const qty = Number(qtyInput?.value || 1);
+
+        // MAS-style guard: require explicit acknowledgement
+        if(!confirmCheck?.checked){
+          alert("Please confirm you understand this is a demo and no trade will be executed.");
+          return;
+        }
+
+        if(!Number.isFinite(qty) || qty <= 0){
+          alert("Please enter a valid quantity.");
+          return;
+        }
+
+        // ✅ Demo redirect (you can implement this route later)
+        // Example: /purchase?symbol=AAPL&qty=3
+        const sym = encodeURIComponent("<%= symbol %>");
+        const q = encodeURIComponent(String(Math.floor(qty)));
+        window.location.href = `/purchase?symbol=${sym}&qty=${q}`;
+      });
+
+      // ESC to close
+      document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape" && backdrop.style.display === "flex") closeModal();
+      });
+    })();
+  </script>
+
+</body>
 </html>
