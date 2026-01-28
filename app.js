@@ -8,7 +8,7 @@
  *    B) Yahoo Finance (backup)
  *    Fallback) last-known cached quote (stale but not blank)
  * - User authentication & portfolio management
- * - Admin controls & stock management
+ * - Admin controls & stock management (without stockController)
  *
  * MAS Alignment:
  * - Transparency (clear data sources + caching)
@@ -16,44 +16,43 @@
  * - Human-in-the-loop (no auto trading)
  ****************************************************/
 
-const express = require('express');
-const path = require('path');
-const session = require('express-session');
-const flash = require('connect-flash');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
+const express = require("express");
+const path = require("path");
+const session = require("express-session");
+const flash = require("connect-flash");
+const bcrypt = require("bcrypt");
+require("dotenv").config();
 
 // Backup provider (B) for quotes
-const yahooFinance = require('yahoo-finance2').default;
+const yahooFinance = require("yahoo-finance2").default;
 
 // Database
-const db = require('./db');
+const db = require("./db");
 
-// Controllers
-const authController = require('./controllers/authController');
-const profileController = require('./controllers/profileController');
-const adminController = require('./controllers/adminController');
-const stockController = require('./controllers/stockController');
+// Controllers (keep these if files exist)
+const authController = require("./controllers/authController");
+const profileController = require("./controllers/profileController");
+const adminController = require("./controllers/adminController");
 
 // Middleware
-const { checkAuthenticated, checkAdmin } = require('./middleware/auth');
-const upload = require('./middleware/upload');
+const { checkAuthenticated, checkAdmin } = require("./middleware/auth");
+const upload = require("./middleware/upload");
 
 const app = express();
 
 // View engine setup
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Session & Flash
 app.use(
   session({
-    secret: 'superSecretStockPortal',
+    secret: process.env.SESSION_SECRET || "superSecretStockPortal",
     resave: false,
     saveUninitialized: false
   })
@@ -69,8 +68,8 @@ app.use((req, res, next) => {
 
 // Globals for views
 app.use((req, res, next) => {
-  res.locals.success = req.flash('success');
-  res.locals.error = req.flash('error');
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
   res.locals.currentUser = req.session.user || null;
   next();
 });
@@ -81,8 +80,8 @@ app.use((req, res, next) => {
 const API_KEY = process.env.FINNHUB_API_KEY;
 
 if (!API_KEY) {
-  console.error("❌ FINNHUB_API_KEY is missing.");
-  console.error("✅ Add it to .env → FINNHUB_API_KEY=your_key_here");
+  console.error(" FINNHUB_API_KEY is missing.");
+  console.error(" Add it to .env → FINNHUB_API_KEY=your_key_here");
 }
 
 /****************************************************
@@ -92,35 +91,34 @@ async function ensureAdminExists() {
   try {
     const [admins] = await db
       .promise()
-      .query('SELECT * FROM users WHERE roleId = 2 LIMIT 1');
+      .query("SELECT * FROM users WHERE roleId = 2 LIMIT 1");
 
     if (admins.length > 0) {
-      console.log('✅ Admin already exists.');
+      console.log(" Admin already exists.");
       return;
     }
 
-    const hashed = await bcrypt.hash('Admin123!', 10);
+    const hashed = await bcrypt.hash("Admin123!", 10);
 
     const [result] = await db
       .promise()
       .query(
-        'INSERT INTO users (username, email, password, roleId) VALUES (?,?,?,2)',
-        ['admin', 'admin@stock.com', hashed]
+        "INSERT INTO users (username, email, password, roleId) VALUES (?,?,?,2)",
+        ["admin", "admin@stock.com", hashed]
       );
 
     await db
       .promise()
       .query(
-        'INSERT INTO user_profiles (userId, fullName, bio) VALUES (?,?,?)',
-        [result.insertId, 'System Admin', 'Auto-created admin']
+        "INSERT INTO user_profiles (userId, fullName, bio) VALUES (?,?,?)",
+        [result.insertId, "System Admin", "Auto-created admin"]
       );
 
-    console.log('✅ Default admin created: username=admin, password=Admin123!');
+    console.log(" Default admin created: username=admin, password=Admin123!");
   } catch (err) {
-    console.error('Error ensuring admin exists:', err);
+    console.error("Error ensuring admin exists:", err);
   }
 }
-
 ensureAdminExists();
 
 /****************************************************
@@ -131,6 +129,16 @@ const ALL_STOCKS = [
   "GOOGL", "META", "NFLX", "BABA", "INTC",
   "AMD", "ORCL", "ADBE", "PYPL", "CRM",
   "UBER", "SHOP", "DIS", "SBUX", "NKE"
+];
+
+/****************************************************
+ *  DEMO PORTFOLIO HOLDINGS (single source of truth)
+ ****************************************************/
+const PORTFOLIO_HOLDINGS = [
+  { symbol: "AAPL", qty: 15, avg: 162.1 },
+  { symbol: "TSLA", qty: 5, avg: 190.3 },
+  { symbol: "NVDA", qty: 4, avg: 450.88 },
+  { symbol: "AMZN", qty: 10, avg: 98.32 }
 ];
 
 /****************************************************
@@ -165,7 +173,7 @@ async function fetchJsonWithTimeout(url, timeout = 8000) {
  * STOOQ (historical fallback only)
  ****************************************************/
 async function fetchStooqDailySeries(symbol, days = 30) {
-  const stooqSymbol = `${symbol.toLowerCase()}.us`;
+  const stooqSymbol = `${String(symbol).toLowerCase()}.us`;
   const url = `https://stooq.com/q/d/l/?s=${stooqSymbol}&i=d`;
 
   const res = await fetchWithTimeout(url);
@@ -194,34 +202,17 @@ async function fetchStooqDailySeries(symbol, days = 30) {
 }
 
 /****************************************************
- * ✅ A + B + FALLBACK QUOTE SYSTEM
- * --------------------------------------------------
- * A) Finnhub primary
- * B) Yahoo Finance backup
- * Fallback) last cached quote (stale)
- *
- * Why this stops "Unavailable":
- * - Even if Finnhub rate-limits (429), we keep showing:
- *   1) Yahoo quote, OR
- *   2) last known cached quote (stale)
+ *  A + B + FALLBACK QUOTE SYSTEM
  ****************************************************/
-
-// How long we consider a quote "fresh"
 const QUOTE_TTL_MS = 15 * 1000; // 15s
-
-// Cache per symbol: { ts, data, source, stale }
 const quoteBySymbol = new Map();
 
-// If Finnhub rate-limits, we avoid calling it for a short cooldown
 let finnhubBlockedUntil = 0;
 const FINNHUB_COOLDOWN_MS = 60 * 1000; // 60s after a 429
 
-// ---- B) Yahoo backup quote ----
 async function fetchYahooQuote(symbol) {
-  // yahoo-finance2 returns a big object; we map to Finnhub-like shape
   const sym = String(symbol).toUpperCase();
 
-  // Timeout wrapper so Yahoo can’t hang your server
   const data = await Promise.race([
     yahooFinance.quote(sym),
     new Promise((_, reject) =>
@@ -236,41 +227,26 @@ async function fetchYahooQuote(symbol) {
   return {
     c: Number.isFinite(c) ? c : null,
     d: Number.isFinite(d) ? d : null,
-    dp: Number.isFinite(dp) ? dp : null,
-    // Keeping extra fields is fine, but not necessary
+    dp: Number.isFinite(dp) ? dp : null
   };
 }
 
-// ---- A) Finnhub primary quote ----
 async function fetchFinnhubQuote(symbol) {
   const sym = String(symbol).toUpperCase();
   const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${API_KEY}`;
   return fetchJsonWithTimeout(url, 8000);
 }
 
-/**
- * getQuoteABCached(symbol)
- * ------------------------
- * Returns:
- * {
- *   quote: { c, d, dp, ... }  // Finnhub-like fields
- *   stale: boolean           // true if fallback used
- *   source: "finnhub" | "yahoo" | "cache"
- * }
- */
 async function getQuoteABCached(symbol) {
   const sym = String(symbol || "").toUpperCase();
   const now = Date.now();
 
-  // 1) Return fresh cache if available
   const hit = quoteBySymbol.get(sym);
   if (hit && (now - hit.ts) < QUOTE_TTL_MS) {
     return { quote: hit.data, stale: false, source: hit.source };
   }
 
-  // Helper: store cache safely
   const store = (data, source, stale = false) => {
-    // Only store if c looks numeric (prevents poisoning cache with null)
     const c = Number(data?.c);
     if (Number.isFinite(c)) {
       quoteBySymbol.set(sym, { ts: now, data, source });
@@ -278,51 +254,46 @@ async function getQuoteABCached(symbol) {
     return { quote: data, stale, source };
   };
 
-  // 2) A) Try Finnhub first (unless we are in cooldown)
   const inCooldown = now < finnhubBlockedUntil;
 
   if (!inCooldown) {
     try {
       const q = await fetchFinnhubQuote(sym);
-
-      // Finnhub quote usually has numeric c
       const c = Number(q?.c);
       if (Number.isFinite(c)) {
         return store(q, "finnhub", false);
       }
-
-      // If Finnhub responded but weird, fall through to Yahoo/cache
     } catch (err) {
-      // If 429, enter cooldown to stop hammering Finnhub
       if (String(err.message).includes("HTTP 429")) {
         finnhubBlockedUntil = now + FINNHUB_COOLDOWN_MS;
       }
-      // Fall through to Yahoo/cache
     }
   }
 
-  // 3) B) Try Yahoo backup
   try {
     const y = await fetchYahooQuote(sym);
     const c = Number(y?.c);
     if (Number.isFinite(c)) {
       return store(y, "yahoo", false);
     }
-  } catch {
-    // Fall through to cache
-  }
+  } catch {}
 
-  // 4) Fallback: return stale cache if we have it (prevents "Unavailable")
   if (hit?.data) {
     return { quote: hit.data, stale: true, source: "cache" };
   }
 
-  // 5) Last resort: return a stable empty quote object (UI won’t crash)
   return { quote: { c: null, d: null, dp: null }, stale: true, source: "cache" };
 }
 
 /****************************************************
- * ✅ ONE ENDPOINT for ticker (browser calls 1 API only)
+ *  QUICK HEALTH CHECK
+ ****************************************************/
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, time: new Date().toISOString() });
+});
+
+/****************************************************
+ *  API: ticker
  ****************************************************/
 const TICKER_SYMBOLS = ["AAPL", "MSFT", "AMZN", "TSLA", "NVDA", "GOOGL", "META", "NFLX"];
 
@@ -355,9 +326,7 @@ app.get("/api/ticker", async (req, res) => {
 });
 
 /****************************************************
- * ✅ ONE ENDPOINT for current page cards (batch)
- * Example:
- *   /api/page-quotes?symbols=AAPL,TSLA,MSFT
+ *  API: page quotes
  ****************************************************/
 app.get("/api/page-quotes", async (req, res) => {
   try {
@@ -366,7 +335,7 @@ app.get("/api/page-quotes", async (req, res) => {
       .split(",")
       .map(s => s.trim().toUpperCase())
       .filter(Boolean)
-      .slice(0, 20); // safety limit
+      .slice(0, 20);
 
     const out = {};
     for (const s of list) {
@@ -385,17 +354,26 @@ app.get("/api/page-quotes", async (req, res) => {
 });
 
 /****************************************************
- * MAIN MARKET DASHBOARD (NO SORTING)
+ *  API: single quote
+ ****************************************************/
+app.get("/api/quote/:symbol", async (req, res) => {
+  try {
+    const symbol = String(req.params.symbol || "").toUpperCase();
+    const { quote, stale, source } = await getQuoteABCached(symbol);
+    res.json({ ...quote, stale, source });
+  } catch {
+    res.status(500).json({ error: "Live quote unavailable" });
+  }
+});
+
+/****************************************************
+ *  HOME (ONLY ONE / ROUTE)
  ****************************************************/
 app.get("/", async (req, res) => {
-  // If user is NOT logged in, show landing page
   if (!req.session.user) {
     return res.render("homepage", { title: "Marketmind - Stock Management Platform" });
   }
 
-  // If user IS logged in, show StockAI dashboard
-
-  // If user IS logged in, show StockAI dashboard
   const page = parseInt(req.query.page) || 1;
   const perPage = 6;
 
@@ -409,36 +387,30 @@ app.get("/", async (req, res) => {
     const results = [];
 
     for (const symbol of symbols) {
-      // 1) Quote (A+B+fallback) — safe for free tier
       let quoteObj = { c: null, d: null, dp: null };
       try {
         const { quote } = await getQuoteABCached(symbol);
         quoteObj = quote;
       } catch {}
 
-      // 2) 30-day trend (Finnhub candles → fallback Stooq)
       let graph = { labels: [], prices: [] };
 
-      // A) Finnhub candles (often blocked on free tier)
+      // Finnhub candles first
       try {
         const to = Math.floor(Date.now() / 1000);
         const from = to - 30 * 24 * 60 * 60;
 
         const candle = await fetchJsonWithTimeout(
-          `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`
+          `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`
         );
 
         if (candle.s === "ok" && Array.isArray(candle.c) && Array.isArray(candle.t)) {
-          graph.labels = candle.t.map(ts =>
-            new Date(ts * 1000).toISOString().split("T")[0]
-          );
+          graph.labels = candle.t.map(ts => new Date(ts * 1000).toISOString().split("T")[0]);
           graph.prices = candle.c.map(Number).filter(n => Number.isFinite(n));
         }
-      } catch {
-        // silent fallback
-      }
+      } catch {}
 
-      // B) Stooq fallback
+      // Stooq fallback
       if (graph.prices.length === 0) {
         try {
           const stooqSeries = await fetchStooqDailySeries(symbol, 30);
@@ -447,7 +419,7 @@ app.get("/", async (req, res) => {
         } catch {}
       }
 
-      // Final fallback for charts (prevents blank sparkline)
+      // Last fallback so UI doesn't break
       if (graph.prices.length === 0) {
         const p = Number(quoteObj?.c) || 0;
         graph.labels = ["1", "2", "3"];
@@ -459,8 +431,8 @@ app.get("/", async (req, res) => {
 
     res.render("home", { results, page, totalPages, title: "Marketmind" });
   } catch (err) {
-    console.error("DASHBOARD ERROR:", err);
-    res.send("Error loading stock data");
+    console.error("HOME ERROR:", err);
+    res.render("home", { results: [], page: 1, totalPages: 0, title: "Marketmind" });
   }
 });
 
@@ -472,22 +444,7 @@ app.get("/chart/:symbol", (req, res) => {
 });
 
 /****************************************************
- * SINGLE QUOTE API (still exists, but now A+B+fallback)
- * NOTE:
- * - Keep it for other pages, but DO NOT poll it per card anymore
- ****************************************************/
-app.get("/api/quote/:symbol", async (req, res) => {
-  try {
-    const symbol = String(req.params.symbol || "").toUpperCase();
-    const { quote, stale, source } = await getQuoteABCached(symbol);
-    res.json({ ...quote, stale, source });
-  } catch (err) {
-    res.status(500).json({ error: "Live quote unavailable" });
-  }
-});
-
-/****************************************************
- * PORTFOLIO (demo)
+ * PORTFOLIO (demo page)
  ****************************************************/
 app.get("/portfolio", (req, res) => {
   res.render("portfolio", {
@@ -495,33 +452,130 @@ app.get("/portfolio", (req, res) => {
       totalValue: 0,
       dailyChange: -132.4,
       dailyPercent: -0.52,
-      holdings: [
-        { symbol: "AAPL", qty: 15, avg: 162.1 },
-        { symbol: "TSLA", qty: 5, avg: 190.3 },
-        { symbol: "NVDA", qty: 4, avg: 450.88 },
-        { symbol: "AMZN", qty: 10, avg: 98.32 }
-      ]
+      holdings: PORTFOLIO_HOLDINGS
     }
   });
 });
 
 /****************************************************
- * ✅ MARKET PAGE (separate from homepage)
- * Route: /market
- * View : market.ejs
- *
- * MAS notes:
- * - View-only market monitoring (no trade execution)
- * - Clear data source + fallback behaviour
+ *  PORTFOLIO LIVE API (NEVER CRASH + ALWAYS JSON)
  ****************************************************/
+app.get("/api/portfolio-live", async (req, res) => {
+  console.log("HIT: GET /api/portfolio-live");
 
-// Candle cooldown (prevents repeated 403/429 spam on free tier)
+  const holdings = PORTFOLIO_HOLDINGS;
+
+  try {
+    let totalValue = 0;
+    const allocation = [];
+
+    for (const h of holdings) {
+      try {
+        const { quote, stale, source } = await getQuoteABCached(h.symbol);
+
+        const livePrice = Number(quote?.c);
+        const safeLivePrice = Number.isFinite(livePrice) ? livePrice : null;
+
+        // If live price not available, fallback to avg cost (charts still show)
+        const fallbackPrice = Number.isFinite(Number(h.avg)) ? Number(h.avg) : 0;
+        const priceToUse = safeLivePrice ?? fallbackPrice;
+
+        const qty = Number(h.qty || 0);
+        const value = priceToUse * qty;
+
+        totalValue += value;
+
+        allocation.push({
+          symbol: String(h.symbol).toUpperCase(),
+          value: Math.round(value * 100) / 100,
+          price: Math.round(priceToUse * 100) / 100,
+          source: safeLivePrice ? source : "avg-fallback",
+          stale: safeLivePrice ? !!stale : true
+        });
+      } catch (innerErr) {
+        console.error(`PORTFOLIO-LIVE error on ${h.symbol}:`, innerErr?.message || innerErr);
+        allocation.push({ symbol: String(h.symbol).toUpperCase(), value: 0, price: 0, source: "error", stale: true });
+      }
+    }
+
+    res.json({
+      totalValue: Math.round(totalValue * 100) / 100,
+      allocation
+    });
+  } catch (err) {
+    console.error("PORTFOLIO LIVE ERROR:", err?.message || err);
+
+    // Still return JSON so frontend won't show Offline forever
+    res.status(200).json({
+      totalValue: 0,
+      allocation: holdings.map(h => ({ symbol: String(h.symbol).toUpperCase(), value: 0, price: 0, source: "error", stale: true })),
+      error: "portfolio-live unavailable"
+    });
+  }
+});
+
+/****************************************************
+ *  PORTFOLIO 30-DAY HISTORY API (real performance chart)
+ * Uses Stooq daily closes for each holding and sums portfolio value per day.
+ ****************************************************/
+let portfolioHistoryCache = { ts: 0, data: null };
+const PORTFOLIO_HISTORY_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+app.get("/api/portfolio-history", async (req, res) => {
+  try {
+    const now = Date.now();
+    if (portfolioHistoryCache.data && (now - portfolioHistoryCache.ts) < PORTFOLIO_HISTORY_TTL_MS) {
+      return res.json(portfolioHistoryCache.data);
+    }
+
+    const holdings = PORTFOLIO_HOLDINGS;
+
+    const seriesBySymbol = {};
+    for (const h of holdings) {
+      const s = String(h.symbol).toUpperCase();
+      seriesBySymbol[s] = await fetchStooqDailySeries(s, 30);
+    }
+
+    const baseSym = String(holdings[0]?.symbol || "AAPL").toUpperCase();
+    const baseLabels = seriesBySymbol[baseSym]?.labels || [];
+
+    const values = [];
+    for (const date of baseLabels) {
+      let total = 0;
+
+      for (const h of holdings) {
+        const sym = String(h.symbol).toUpperCase();
+        const labels = seriesBySymbol[sym]?.labels || [];
+        const prices = seriesBySymbol[sym]?.prices || [];
+
+        const idx = labels.indexOf(date);
+        const px = idx >= 0 ? Number(prices[idx]) : NaN;
+
+        total += (Number.isFinite(px) ? px : 0) * Number(h.qty || 0);
+      }
+
+      values.push(Math.round(total * 100) / 100);
+    }
+
+    const payload = { labels: baseLabels, values };
+    portfolioHistoryCache = { ts: now, data: payload };
+
+    res.json(payload);
+  } catch (err) {
+    console.error("PORTFOLIO HISTORY ERROR:", err?.message || err);
+    res.status(500).json({ error: "portfolio-history unavailable" });
+  }
+});
+
+/****************************************************
+ *  MARKET PAGE
+ ****************************************************/
 let candleBlockedUntil = 0;
-const CANDLE_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+const CANDLE_COOLDOWN_MS = 5 * 60 * 1000;
 
 app.get("/market", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const perPage = 6; // 6 cards per page
+  const perPage = 6;
 
   const symbol = String(req.query.symbol || ALL_STOCKS[0] || "AAPL").toUpperCase();
 
@@ -537,22 +591,14 @@ app.get("/market", async (req, res) => {
     const candleInCooldown = nowMs < candleBlockedUntil;
 
     for (const s of symbols) {
-      /***********************
-       * 1) Quote (A + B + fallback)
-       ***********************/
       let quoteObj = { c: null, d: null, dp: null, stale: true, source: "cache" };
       try {
         const { quote, stale, source } = await getQuoteABCached(s);
         quoteObj = { ...quote, stale, source };
       } catch {}
 
-      /***********************
-       * 2) 30-day trend
-       * Finnhub candles (if allowed) → fallback Stooq
-       ***********************/
       let graph = { labels: [], prices: [] };
 
-      // A) Finnhub candles (skip if cooldown)
       if (!candleInCooldown) {
         try {
           const to = Math.floor(Date.now() / 1000);
@@ -569,7 +615,6 @@ app.get("/market", async (req, res) => {
             graph.prices = candle.c.map(Number).filter(n => Number.isFinite(n));
           }
         } catch (err) {
-          // Cooldown only for 403/429 to avoid hammering Finnhub free tier
           const msg = String(err?.message || "");
           if (msg.includes("HTTP 403") || msg.includes("HTTP 429")) {
             candleBlockedUntil = Date.now() + CANDLE_COOLDOWN_MS;
@@ -577,7 +622,6 @@ app.get("/market", async (req, res) => {
         }
       }
 
-      // B) Stooq fallback
       if (graph.prices.length === 0) {
         try {
           const stooqSeries = await fetchStooqDailySeries(s, 30);
@@ -586,7 +630,6 @@ app.get("/market", async (req, res) => {
         } catch {}
       }
 
-      // Final fallback (prevents blank charts)
       if (graph.prices.length === 0) {
         const p = Number(quoteObj?.c);
         const seed = Number.isFinite(p) ? p : 0;
@@ -604,7 +647,6 @@ app.get("/market", async (req, res) => {
       watchlist: ALL_STOCKS,
       symbol
     });
-
   } catch (err) {
     console.error("MARKET ERROR:", err);
     res.status(500).send("Error loading market page");
@@ -612,139 +654,48 @@ app.get("/market", async (req, res) => {
 });
 
 /****************************************************
- * AUTHENTICATION ROUTES
+ * AUTH ROUTES
  ****************************************************/
+app.get("/register", authController.showRegister);
+app.post("/register", authController.register);
 
-// Home
-app.get('/', async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const perPage = 6;
+app.get("/login", authController.showLogin);
+app.post("/login", authController.login);
 
-  const start = (page - 1) * perPage;
-  const end = start + perPage;
+app.get("/logout", authController.logout);
 
-  const symbols = ALL_STOCKS.slice(start, end);
-  const totalPages = Math.ceil(ALL_STOCKS.length / perPage);
+/****************************************************
+ * PROFILE ROUTES
+ ****************************************************/
+app.get("/profile", checkAuthenticated, profileController.showProfile);
+app.get("/profile/risk", checkAuthenticated, profileController.showRiskProfile);
+app.get("/account", checkAuthenticated, profileController.showAccount);
 
-  try {
-    const results = [];
+app.post("/profile/wallet/remove", checkAuthenticated, profileController.removeWalletAddress);
 
-    for (const symbol of symbols) {
-      // 1) Quote (A+B+fallback)
-      let quoteObj = { c: null, d: null, dp: null };
-      try {
-        const { quote } = await getQuoteABCached(symbol);
-        quoteObj = quote;
-      } catch {}
+app.post("/profile", checkAuthenticated, upload.single("avatar"), profileController.updateProfile);
+app.post("/profile/risk", checkAuthenticated, profileController.updateRiskProfile);
+app.post("/profile/password", checkAuthenticated, profileController.updatePassword);
 
-      // 2) 30-day trend
-      let graph = { labels: [], prices: [] };
+/****************************************************
+ * ADMIN ROUTES
+ ****************************************************/
+app.get("/admin/dashboard", checkAdmin, adminController.showDashboard);
 
-      try {
-        const to = Math.floor(Date.now() / 1000);
-        const from = to - 30 * 24 * 60 * 60;
+app.get("/admin/users", checkAdmin, adminController.listUsers);
+app.get("/admin/users/edit/:id", checkAdmin, adminController.showEditUser);
+app.post("/admin/users/edit/:id", checkAdmin, adminController.updateUser);
+app.post("/admin/users/delete/:id", checkAdmin, adminController.deleteUser);
 
-        const candle = await fetchJsonWithTimeout(
-          `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`
-        );
+app.post("/admin/users/freeze/:id", checkAdmin, adminController.freezeUser);
+app.post("/admin/users/unfreeze/:id", checkAdmin, adminController.unfreezeUser);
 
-        if (candle.s === "ok" && Array.isArray(candle.c) && Array.isArray(candle.t)) {
-          graph.labels = candle.t.map(ts =>
-            new Date(ts * 1000).toISOString().split("T")[0]
-          );
-          graph.prices = candle.c.map(Number).filter(n => Number.isFinite(n));
-        }
-      } catch {
-        // silent fallback
-      }
+/****************************************************
+ * SERVER
+ ****************************************************/
+const PORT = process.env.PORT || 3000;
 
-      if (graph.prices.length === 0) {
-        try {
-          const stooqSeries = await fetchStooqDailySeries(symbol, 30);
-          graph.labels = stooqSeries.labels;
-          graph.prices = stooqSeries.prices;
-        } catch {}
-      }
-
-      if (graph.prices.length === 0) {
-        const p = Number(quoteObj?.c) || 0;
-        graph.labels = ["1", "2", "3"];
-        graph.prices = [p, p, p];
-      }
-
-      results.push({ symbol, quote: quoteObj, graph });
-    }
-
-    res.render('home', { results, page, totalPages, title: 'Marketmind Home' });
-  } catch (err) {
-    console.error('HOME ERROR:', err);
-    res.render('home', { results: [], page: 1, totalPages: 0, title: 'Marketmind Home' });
-  }
-});
-
-// Auth
-app.get('/register', authController.showRegister);
-app.post('/register', authController.register);
-
-app.get('/login', authController.showLogin);
-app.post('/login', authController.login);
-
-app.get('/logout', authController.logout);
-
-// Profile
-app.get('/profile', checkAuthenticated, profileController.showProfile);
-app.get('/profile/risk', checkAuthenticated, profileController.showRiskProfile);
-app.get('/account', checkAuthenticated, profileController.showAccount);
-
-// Remove wallet (MUST BE BEFORE generic /profile POST)
-app.post('/profile/wallet/remove', checkAuthenticated, profileController.removeWalletAddress);
-
-// Update profile
-app.post(
-  '/profile',
-  checkAuthenticated,
-  upload.single('avatar'),
-  profileController.updateProfile
-);
-
-app.post('/profile/risk', checkAuthenticated, profileController.updateRiskProfile);
-
-// Change password
-app.post(
-  '/profile/password',
-  checkAuthenticated,
-  profileController.updatePassword
-);
-
-// Admin
-app.get('/admin/dashboard', checkAdmin, adminController.showDashboard);
-
-// Admin User Management
-app.get('/admin/users', checkAdmin, adminController.listUsers);
-app.get('/admin/users/edit/:id', checkAdmin, adminController.showEditUser);
-app.post('/admin/users/edit/:id', checkAdmin, adminController.updateUser);
-app.post('/admin/users/delete/:id', checkAdmin, adminController.deleteUser);
-
-// Freeze / Unfreeze
-app.post('/admin/users/freeze/:id', checkAdmin, adminController.freezeUser);
-app.post('/admin/users/unfreeze/:id', checkAdmin, adminController.unfreezeUser);
-
-// User Stocks
-app.get('/stocks', checkAuthenticated, stockController.showMyStocks);
-app.post('/stocks', checkAuthenticated, stockController.addStock);
-app.post('/stocks/:stockId/edit', checkAuthenticated, stockController.editStock);
-app.post('/stocks/:stockId/delete', checkAuthenticated, stockController.deleteStock);
-
-// Admin Stocks
-app.get('/admin/stocks', checkAdmin, stockController.adminShowAllStocks);
-app.post('/admin/stocks/:stockId/freeze', checkAdmin, stockController.freezeStock);
-app.post('/admin/stocks/:stockId/unfreeze', checkAdmin, stockController.unfreezeStock);
-app.get('/admin/stocks/report', checkAdmin, stockController.getExcessHoldingsReport);
-app.get('/admin/stocks/export', checkAdmin, stockController.exportReport);
-
-// Server
-const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log('✅ Connected to MySQL database: stock_portal');
+  console.log(` Server running at http://localhost:${PORT}`);
+  console.log(" Connected to MySQL database: stock_portal");
 });

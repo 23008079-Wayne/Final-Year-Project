@@ -1,218 +1,359 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Portfolio Dashboard</title>
+  <title>Portfolio Dashboard</title>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <style>
-        body {
-            background: #0d0d0d;
-            margin: 0;
-            padding: 0;
-            font-family: "Inter", sans-serif;
-            color: #eee;
-        }
+  <style>
+    body { background:#0d0d0d; margin:0; padding:0; font-family:"Inter",sans-serif; color:#eee; }
+    .header { padding:25px 40px; background:#111; border-bottom:1px solid #222; font-size:26px; font-weight:500; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .status { font-size:13px; color:#bbb; padding:6px 10px; border:1px solid #222; border-radius:999px; background:#0f0f0f; }
+    .status.ok { color:#4caf50; border-color: rgba(76,175,80,0.35); }
+    .status.bad { color:#e53935; border-color: rgba(229,57,53,0.35); }
 
-        .header {
-            padding: 25px 40px;
-            background: #111;
-            border-bottom: 1px solid #222;
-            font-size: 26px;
-            font-weight: 500;
-        }
+    .container { padding:35px; display:grid; grid-template-columns: 2fr 1fr; gap:30px; }
 
-        .container {
-            padding: 35px;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 30px;
-        }
+    .summary-card, .table-card, .right-card {
+      background:#1a1a1a; padding:25px; border-radius:14px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.05);
+    }
 
-        .summary-card,
-        .table-card,
-        .right-card {
-            background: #1a1a1a;
-            padding: 25px;
-            border-radius: 14px;
-            box-shadow: 0 0 20px rgba(255,255,255,0.05);
-        }
+    .summary-value { font-size:40px; margin:0; }
+    .positive { color:#4caf50; }
+    .negative { color:#e53935; }
+    .muted { color:#aaa; font-size:13px; margin-top:8px; }
 
-        .summary-value {
-            font-size: 40px;
-            margin: 0;
-        }
+    table { width:100%; margin-top:15px; border-collapse:collapse; }
+    th { text-align:left; padding-bottom:12px; border-bottom:1px solid #333; font-size:14px; }
+    td { padding:12px 5px; border-bottom:1px solid #222; color:#ccc; }
+    canvas { margin-top:25px; }
 
-        .positive { color: #4caf50; }
-        .negative { color: #e53935; }
+    .badge {
+      display:inline-block; font-size:12px; padding:3px 8px; border-radius:999px;
+      border:1px solid #333; color:#bbb; margin-left:8px;
+    }
+    .badge.stale { border-color: rgba(255,152,0,0.35); color:#ff9800; }
 
-        table {
-            width: 100%;
-            margin-top: 15px;
-            border-collapse: collapse;
-        }
-
-        th {
-            text-align: left;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #333;
-            font-size: 14px;
-        }
-
-        td {
-            padding: 12px 5px;
-            border-bottom: 1px solid #222;
-            color: #ccc;
-        }
-
-        canvas {
-            margin-top: 25px;
-        }
-    </style>
+    /* NEW: P/L colouring */
+    .pl-pos { color:#4caf50; }
+    .pl-neg { color:#e53935; }
+  </style>
 </head>
 
 <body>
+  <%
+    const totalValue = Number((portfolio && portfolio.totalValue) ?? 0);
+    const dailyChange = Number((portfolio && portfolio.dailyChange) ?? 0);
+    const dailyPercent = Number((portfolio && portfolio.dailyPercent) ?? 0);
+    const changeClass = dailyChange >= 0 ? "positive" : "negative";
+    const holdings = (portfolio && Array.isArray(portfolio.holdings)) ? portfolio.holdings : [];
+  %>
 
-    <!-- PAGE HEADER -->
-    <div class="header">📊 My Portfolio</div>
+  <div class="header">
+    <div>📊 My Portfolio</div>
+    <div id="liveStatus" class="status bad">Live: Offline</div>
+  </div>
 
-    <div class="container">
+  <div class="container">
+    <div>
+      <div class="summary-card">
+        <h2>Total Portfolio Value</h2>
 
-        <!-- LEFT SIDE SUMMARY & HOLDINGS -->
-        <div>
+        <p id="liveValue" class="summary-value">
+          $<%= totalValue.toLocaleString() %>
+        </p>
 
-            <!-- STATIC SUMMARY CARD -->
-            <div class="summary-card">
-                <h2>Total Portfolio Value</h2>
+        <p class="<%= changeClass %>">
+          <%= dailyChange >= 0 ? "+" : "" %>$<%= Math.abs(dailyChange).toFixed(2) %>
+          (<%= dailyPercent >= 0 ? "+" : "" %><%= dailyPercent.toFixed(2) %>%)
+        </p>
 
-                <!-- This value updates LIVE with JS -->
-                <p id="liveValue" class="summary-value">
-                    $<%= portfolio.totalValue.toLocaleString() %>
-                </p>
+        <div class="muted">Auto-refresh every 3 seconds (demo).</div>
+      </div>
 
-                <p class="<%= portfolio.dailyChange >= 0 ? 'positive' : 'negative' %>">
-                    <%= portfolio.dailyChange >= 0 ? '+' : '' %><%= portfolio.dailyChange %> 
-                    (<%= portfolio.dailyPercent %>%)
-                </p>
-            </div>
+      <div class="table-card">
+        <h2>Current Positions</h2>
 
-            <!-- HOLDINGS TABLE -->
-            <div class="table-card">
-                <h2>Current Positions</h2>
+        <table>
+          <tr>
+            <th>Symbol</th>
+            <th>Qty</th>
+            <th>Avg Price</th>
+            <th>Live Price</th>
+            <th>Market Value</th>
+            <th>P/L</th>
+          </tr>
 
-                <table>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>Qty</th>
-                        <th>Avg Price</th>
-                    </tr>
+          <% if (holdings.length === 0) { %>
+            <tr>
+              <td colspan="6" class="muted">No holdings yet.</td>
+            </tr>
+          <% } else { %>
+            <% holdings.forEach(item => { 
+              const sym = String(item.symbol || "").toUpperCase();
+              const qty = Number(item.qty ?? 0);
+              const avg = Number(item.avg ?? 0);
+            %>
+              <tr data-symbol="<%= sym %>">
+                <td><%= sym %></td>
+                <td class="qty"><%= qty %></td>
 
-                    <% portfolio.holdings.forEach(item => { %>
-                        <tr>
-                            <td><%= item.symbol %></td>
-                            <td><%= item.qty %></td>
-                            <td>$<%= item.avg %></td>
-                        </tr>
-                    <% }) %>
-                </table>
-            </div>
-        </div>
+                <!-- NEW: store avg in a hidden data attribute so JS can calculate P/L -->
+                <td class="avg" data-avg="<%= avg %>">$<%= avg.toFixed(2) %></td>
 
-        <!-- RIGHT SIDE CHARTS -->
-        <div>
+                <td class="livePrice muted">—</td>
+                <td class="marketValue muted">—</td>
 
-            <!-- ALLOCATION CHART (NOW STOCK-BASED) -->
-            <div class="right-card">
-                <h2>Stock Allocation</h2>
-                <canvas id="sectorChart"></canvas>
-            </div>
-
-            <!-- LIVE TREND CHART -->
-            <div class="right-card">
-                <h2>Portfolio Performance (Live)</h2>
-                <canvas id="trendChart"></canvas>
-            </div>
-
-        </div>
+                <!-- NEW: P/L cell -->
+                <td class="pl muted">—</td>
+              </tr>
+            <% }) %>
+          <% } %>
+        </table>
+      </div>
     </div>
 
-    <!-- REAL-TIME CHART LOGIC -->
-    <script>
-        const sectorCtx = document.getElementById("sectorChart").getContext("2d");
-        const trendCtx = document.getElementById("trendChart").getContext("2d");
-        const liveValueText = document.getElementById("liveValue");
+    <div>
+      <div class="right-card">
+        <h2>Stock Allocation</h2>
+        <canvas id="sectorChart"></canvas>
+      </div>
 
-        // ===== SECTOR (STOCK ALLOCATION) DONUT CHART =====
-        let sectorChart = new Chart(sectorCtx, {
-            type: "doughnut",
-            data: {
-                labels: [],           // stays empty until live fetch
-                datasets: [{
-                    data: [],         // stays empty
-                    backgroundColor: ["#4caf50", "#03a9f4", "#ff9800", "#e91e63", "#9c27b0"]
-                }]
-            }
+      <div class="right-card">
+        <h2>Portfolio Performance (Live)</h2>
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sectorCtx = document.getElementById("sectorChart").getContext("2d");
+    const trendCtx = document.getElementById("trendChart").getContext("2d");
+    const liveValueText = document.getElementById("liveValue");
+    const liveStatus = document.getElementById("liveStatus");
+
+    function setStatus(ok) {
+        liveStatus.classList.toggle("ok", ok);
+        liveStatus.classList.toggle("bad", !ok);
+        liveStatus.textContent = ok ? "Live: Connected" : "Live: Offline";
+    }
+
+    const REFRESH_MS = 3000;
+    const LIVE_WINDOW_POINTS = 20;
+
+    // stable colors
+    const DONUT_COLORS = ["#4caf50","#03a9f4","#ff9800","#e91e63","#9c27b0","#8bc34a","#ffc107","#00bcd4"];
+
+    // -------- DONUT: Allocation ----------
+    let sectorChart = new Chart(sectorCtx, {
+        type: "doughnut",
+        data: {
+        labels: [],
+        datasets: [{ data: [], backgroundColor: DONUT_COLORS }]
+        },
+        options: {
+        animation: false,
+        plugins: { legend: { labels: { color: "#ddd" } } }
+        }
+    });
+
+    // -------- LINE: Performance ----------
+    // We will store:
+    // - history series (30 days) from /api/portfolio-history
+    // - then a "LIVE" tail that updates every 3 seconds
+    let historyLabels = [];
+    let historyValues = [];
+    let liveLabels = [];
+    let liveValues = [];
+
+    let trendChart = new Chart(trendCtx, {
+        type: "line",
+        data: {
+        labels: [],
+        datasets: [{
+            label: "Portfolio Value",
+            data: [],
+            borderColor: "#00eaff",
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 0
+        }]
+        },
+        options: {
+        animation: false,
+        plugins: { legend: { labels: { color: "#ddd" } } },
+        scales: {
+            x: { ticks: { color: "#aaa" }, grid: { color: "rgba(255,255,255,0.06)" } },
+            y: { ticks: { color: "#aaa" }, grid: { color: "rgba(255,255,255,0.06)" } }
+        }
+        }
+    });
+
+    function redrawTrend() {
+        const labels = [...historyLabels, ...liveLabels];
+        const values = [...historyValues, ...liveValues];
+        trendChart.data.labels = labels;
+        trendChart.data.datasets[0].data = values;
+        trendChart.update();
+    }
+
+    // -------- TABLE UPDATE (Live Price + MV + P/L) ----------
+    function updateHoldingsTable(allocation) {
+        const bySymbol = new Map();
+        allocation.forEach(a => {
+        const sym = String(a.symbol || "").toUpperCase();
+        bySymbol.set(sym, a);
         });
 
-        // ===== PORTFOLIO TREND (LIVE LINE CHART) =====
-        let trendChart = new Chart(trendCtx, {
-            type: "line",
-            data: {
-                labels: [],        // filled live
-                datasets: [{
-                    label: "Portfolio Value",
-                    data: [],
-                    borderColor: "#00eaff",
-                    borderWidth: 3,
-                    tension: 0.3
-                }]
-            },
-            options: { animation: false }
-        });
+        document.querySelectorAll("tr[data-symbol]").forEach(row => {
+        const sym = row.getAttribute("data-symbol");
 
-        // ===== FETCH LIVE DATA =====
-        async function fetchLivePortfolio() {
-            const res = await fetch("/api/portfolio-live");
-            const data = await res.json();
+        const qty = Number(row.querySelector(".qty")?.textContent || 0);
+        const avg = Number(row.querySelector(".avg")?.getAttribute("data-avg") || 0);
 
-            if (!data || data.error) return;
+        const info = bySymbol.get(sym);
+        if (!info) return;
 
-            // --- Update live total value ---
-            liveValueText.innerText = "$" + data.totalValue.toLocaleString();
+        const livePrice = Number(info.price);
+        const mv = Number(info.value);
 
-            // --------------------------------------------------------------------
-            // --- FIXED STOCK ALLOCATION DONUT: FULL HARD RESET EVERY REFRESH ---
-            // --------------------------------------------------------------------
-            sectorChart.data.labels = data.allocation.map(a => a.symbol);
+        const liveCell = row.querySelector(".livePrice");
+        const mvCell = row.querySelector(".marketValue");
+        const plCell = row.querySelector(".pl");
 
-            // Replace dataset entirely to avoid stale values (critical fix)
-            sectorChart.data.datasets = [{
-                data: data.allocation.map(a => a.value),
-                backgroundColor: ["#4caf50", "#03a9f4", "#ff9800", "#e91e63", "#9c27b0"]
-            }];
-
-            sectorChart.update();
-
-            // --- Update trend chart (live portfolio value) ---
-            const timeNow = new Date().toLocaleTimeString();
-            trendChart.data.labels.push(timeNow);
-            trendChart.data.datasets[0].data.push(data.totalValue);
-
-            // keep only last 20 points
-            if (trendChart.data.labels.length > 20) {
-                trendChart.data.labels.shift();
-                trendChart.data.datasets[0].data.shift();
+        // Live Price
+        if (Number.isFinite(livePrice)) {
+            liveCell.classList.remove("muted");
+            if (info.stale) {
+            liveCell.innerHTML = "$" + livePrice.toFixed(2) + ' <span class="badge stale">stale</span>';
+            } else {
+            liveCell.textContent = "$" + livePrice.toFixed(2);
             }
-
-            trendChart.update();
+        } else {
+            liveCell.classList.add("muted");
+            liveCell.textContent = "—";
         }
 
-        // Initial immediate fetch
-        fetchLivePortfolio();
+        // Market Value
+        if (Number.isFinite(mv)) {
+            mvCell.classList.remove("muted");
+            mvCell.textContent = "$" + mv.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+            });
+        } else {
+            mvCell.classList.add("muted");
+            mvCell.textContent = "—";
+        }
 
-        // Update every 3 seconds (faster, smoother)
-        setInterval(fetchLivePortfolio, 3000);
+        // P/L = (Live Price - Avg Price) * Qty
+        if (Number.isFinite(livePrice) && Number.isFinite(avg) && Number.isFinite(qty)) {
+            const pl = (livePrice - avg) * qty;
+
+            plCell.classList.remove("muted");
+            plCell.classList.toggle("pl-pos", pl >= 0);
+            plCell.classList.toggle("pl-neg", pl < 0);
+
+            const sign = pl >= 0 ? "+" : "-";
+            plCell.textContent = sign + "$" + Math.abs(pl).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+            });
+        } else {
+            plCell.classList.add("muted");
+            plCell.classList.remove("pl-pos", "pl-neg");
+            plCell.textContent = "—";
+        }
+        });
+    }
+
+    // -------- DONUT UPDATE (value + % label) ----------
+    function updateAllocationDonut(allocation) {
+        const values = allocation.map(a => Number(a.value || 0));
+        const total = values.reduce((sum, v) => sum + v, 0) || 1;
+
+        const labels = allocation.map(a => {
+        const sym = String(a.symbol || "").toUpperCase();
+        const val = Number(a.value || 0);
+        const pct = (val / total) * 100;
+        return `${sym} (${pct.toFixed(1)}%)`;
+        });
+
+        sectorChart.data.labels = labels;
+        sectorChart.data.datasets[0].data = values;
+        sectorChart.update();
+    }
+
+    // -------- Load REAL 30-day history first ----------
+    async function loadPortfolioHistory() {
+        try {
+        const res = await fetch("/api/portfolio-history", { cache: "no-store" });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!data || data.error) return;
+
+        const labels = Array.isArray(data.labels) ? data.labels : [];
+        const values = Array.isArray(data.values) ? data.values.map(Number) : [];
+
+        historyLabels = labels;
+        historyValues = values.filter(v => Number.isFinite(v));
+
+        // If history is missing/empty, don't break chart
+        redrawTrend();
+        } catch {}
+    }
+
+    // -------- Add live tail points ----------
+    function pushLivePoint(totalValue) {
+        const timeNow = new Date().toLocaleTimeString();
+        liveLabels.push("LIVE " + timeNow);
+        liveValues.push(totalValue);
+
+        while (liveLabels.length > LIVE_WINDOW_POINTS) {
+        liveLabels.shift();
+        liveValues.shift();
+        }
+
+        redrawTrend();
+    }
+
+    // -------- Fetch Live (every 3 sec) ----------
+    async function fetchLivePortfolio() {
+        try {
+        const res = await fetch("/api/portfolio-live", { cache: "no-store" });
+        if (!res.ok) { setStatus(false); return; }
+
+        const data = await res.json();
+        if (!data || data.error) { setStatus(false); return; }
+
+        setStatus(true);
+
+        const liveTotal = Number(data.totalValue || 0);
+        liveValueText.innerText = "$" + liveTotal.toLocaleString();
+
+        if (Array.isArray(data.allocation)) {
+            updateAllocationDonut(data.allocation);
+            updateHoldingsTable(data.allocation);
+        }
+
+        pushLivePoint(liveTotal);
+        } catch {
+        setStatus(false);
+        }
+    }
+
+    // ---- boot sequence ----
+    (async function init() {
+        // 1) load 30 day history first
+        await loadPortfolioHistory();
+
+        // 2) start live updates
+        await fetchLivePortfolio();
+        setInterval(fetchLivePortfolio, REFRESH_MS);
+    })();
     </script>
 
 </body>

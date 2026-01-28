@@ -219,7 +219,7 @@
       color:#999;
     }
 
-    /* ✅ Cards grid stays 2 columns, but 6 cards per page will show as 3 rows nicely */
+    /*  Cards grid stays 2 columns, but 6 cards per page will show as 3 rows nicely */
     .cards{
       display:grid;
       grid-template-columns: repeat(2, minmax(240px, 1fr));
@@ -500,7 +500,7 @@
               <span><%= topLoser ? `${topLoser.symbol} (${topLoser.dp.toFixed(2)}%)` : "N/A" %></span>
             </div>
 
-            <!-- ✅ show both refresh values -->
+            <!--  show both refresh values -->
             <div class="kv-row">
               <span>Card refresh</span>
               <span><span id="refreshMs">—</span> ms</span>
@@ -583,7 +583,7 @@
 
             <div class="actions">
               <a class="btn" href="/chart/<%= item.symbol %>">Full Chart</a>
-              <!-- ✅ MAS note: Purchase is a simulated UI action (no real trade execution) -->
+              <!--  MAS note: Purchase is a simulated UI action (no real trade execution) -->
               <button class="btn purchase-btn"
                       type="button"
                       data-symbol="<%= item.symbol %>"
@@ -617,7 +617,7 @@
               (function(){
                 const symbol = "<%= item.symbol %>";
 
-                // ✅ CARD refresh interval (slow down here)
+                //  CARD refresh interval (slow down here)
                 // 5s is pretty aggressive on free tier. Try 15s.
                 const REFRESH_MS = 15000;
 
@@ -698,7 +698,7 @@
 
                 setInterval(refreshLive, REFRESH_MS);
 
-                // ✅ show card refresh interval in left panel (only needs to run once)
+                //  show card refresh interval in left panel (only needs to run once)
                 const refreshEl = document.getElementById("refreshMs");
                 if(refreshEl && refreshEl.innerText === "—") refreshEl.innerText = String(REFRESH_MS);
               })();
@@ -754,7 +754,7 @@
 
   <script>
     // =========================================================
-    // ✅ TICKER (slow down here)
+    //  TICKER (slow down here)
     // - Uses ONE endpoint: /api/ticker
     // - Change REFRESH_MS to slow ticker refresh
     // =========================================================
@@ -762,7 +762,7 @@
       const tickerEl = document.getElementById("ticker");
       if(!tickerEl) return;
 
-      // ✅ TICKER refresh interval (slow down here)
+      //  TICKER refresh interval (slow down here)
       // Try 20s to reduce "Unavailable"
       const REFRESH_MS = 20000;
 
@@ -822,7 +822,7 @@
           const html = rows.map(renderItem).join("");
           tickerEl.innerHTML = html + html;
 
-          // ✅ show ticker refresh interval in left panel
+          //  show ticker refresh interval in left panel
           const tEl = document.getElementById("tickerRefreshMs");
           if(tEl) tEl.innerText = String(REFRESH_MS);
 

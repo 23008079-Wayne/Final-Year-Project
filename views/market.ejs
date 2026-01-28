@@ -19,7 +19,7 @@
       font-family:"Inter", Arial, sans-serif;
     }
 
-    /* ✅ Same navbar styling as home.ejs */
+    /*  Same navbar styling as home.ejs */
     .nav{
       height: var(--nav-height);
       display:flex;
@@ -47,7 +47,7 @@
     .nav-links a:hover{ border:1px solid #2a2a2a; background:#121212; }
     .cta{ background:#00eaff; color:#000 !important; font-weight:700; }
 
-    /* ✅ Same ticker bar style as home.ejs */
+    /*  Same ticker bar style as home.ejs */
     .ticker-wrap{
       position: sticky;
       top: var(--nav-height);
@@ -240,9 +240,9 @@
 
 <body>
 
-  <!-- ✅ Navbar -->
+  <!--  Navbar -->
   <div class="nav">
-    <div class="brand">📊 StockAI Terminal</div>
+    <div class="brand"> StockAI Terminal</div>
     <div class="nav-links">
       <a href="/" >Home</a>
       <a href="/market" class="cta">Market</a>
@@ -251,7 +251,7 @@
     </div>
   </div>
 
-  <!-- ✅ Same ticker bar (uses /api/ticker) -->
+  <!--  Same ticker bar (uses /api/ticker) -->
   <div class="ticker-wrap" aria-label="Live market ticker">
     <div id="ticker" class="ticker"></div>
   </div>
@@ -333,7 +333,7 @@
   </div>
 
   <script>
-    // ✅ TradingView interactive chart (same as chart.ejs idea)
+    //  TradingView interactive chart (same as chart.ejs idea)
     new TradingView.widget({
       autosize: true,
       symbol: "<%= symbol %>",
@@ -352,7 +352,7 @@
   </script>
 
   <script>
-    // ✅ Load live quote using your A+B+fallback endpoint
+    //  Load live quote using your A+B+fallback endpoint
     (function(){
       const symbol = "<%= symbol %>";
       const statusEl = document.getElementById("quoteStatus");
@@ -389,29 +389,29 @@
       }
 
       load();
-      setInterval(load, 15000); // ✅ slower polling to reduce rate limits
+      setInterval(load, 15000); //  slower polling to reduce rate limits
     })();
   </script>
 
   <script>
-    // ✅ Simulated purchase button (MAS-safe: no trade execution)
+    //  Simulated purchase button (MAS-safe: no trade execution)
     (function(){
       const btn = document.getElementById("buyBtn");
       if(!btn) return;
 
       btn.addEventListener("click", () => {
-        alert("Simulated purchase only ✅\nNo real trade is executed.\n(For student prototype + MAS-aligned demo)");
+        alert("Simulated purchase only \nNo real trade is executed.\n(For student prototype + MAS-aligned demo)");
       });
     })();
   </script>
 
   <script>
-    // ✅ Same ticker logic as your home page (use /api/ticker)
+    //  Same ticker logic as your home page (use /api/ticker)
     (function(){
       const tickerEl = document.getElementById("ticker");
       if(!tickerEl) return;
 
-      const REFRESH_MS = 15000; // ✅ slowed down (15s)
+      const REFRESH_MS = 15000; //  slowed down (15s)
 
       function renderItem(item){
         if(!item || !item.ok){
