@@ -683,3 +683,27 @@ button:focus-visible, .btn:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }
+
+  /* Force a single consistent dark background everywhere */
+  html, body {
+    height: 100%;
+    background: #0d0d0d !important;
+    margin: 0;
+  }
+
+  /* If you have any wrapper like .app, .page, .layout, etc */
+  .app, .page, .layout, .wrapper, .container, main {
+    background: transparent !important;
+  }
+
+  /* Navbar / header should NOT be blue */
+  header, nav, .navbar, .topbar {
+    background: #111 !important;
+    border-bottom: 1px solid #222 !important;
+  }
+
+  /* If your main content is inside a section that became blue */
+  .content, .content-wrap, .main-content {
+    background: transparent !important;
+  }
+

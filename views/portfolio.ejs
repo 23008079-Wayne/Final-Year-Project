@@ -1,220 +1,222 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Portfolio Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Chart.js -->
+  <title><%= typeof title !== "undefined" ? title : "Marketmind" %></title>
+
+  <!-- Global CSS (keeps your navbar the same as other pages) -->
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Portfolio-only CSS (scoped; won’t touch navbar) -->
+  <link rel="stylesheet" href="/css/portfolio.css" />
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    body { background:#0d0d0d; margin:0; padding:0; font-family:"Inter",sans-serif; color:#eee; }
-    .header { padding:25px 40px; background:#111; border-bottom:1px solid #222; font-size:26px; font-weight:500; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-    .status { font-size:13px; color:#bbb; padding:6px 10px; border:1px solid #222; border-radius:999px; background:#0f0f0f; }
-    .status.ok { color:#4caf50; border-color: rgba(76,175,80,0.35); }
-    .status.bad { color:#e53935; border-color: rgba(229,57,53,0.35); }
-
-    .container { padding:35px; display:grid; grid-template-columns: 2fr 1fr; gap:30px; }
-
-    .summary-card, .table-card, .right-card {
-      background:#1a1a1a; padding:25px; border-radius:14px;
-      box-shadow: 0 0 20px rgba(255,255,255,0.05);
-    }
-
-    .summary-value { font-size:40px; margin:0; }
-    .positive { color:#4caf50; }
-    .negative { color:#e53935; }
-    .muted { color:#aaa; font-size:13px; margin-top:8px; }
-
-    table { width:100%; margin-top:15px; border-collapse:collapse; }
-    th { text-align:left; padding-bottom:12px; border-bottom:1px solid #333; font-size:14px; }
-    td { padding:12px 5px; border-bottom:1px solid #222; color:#ccc; }
-    canvas { margin-top:25px; }
-
-    .badge {
-      display:inline-block; font-size:12px; padding:3px 8px; border-radius:999px;
-      border:1px solid #333; color:#bbb; margin-left:8px;
-    }
-    .badge.stale { border-color: rgba(255,152,0,0.35); color:#ff9800; }
-
-    /* NEW: P/L colouring */
-    .pl-pos { color:#4caf50; }
-    .pl-neg { color:#e53935; }
-  </style>
 </head>
+<%- include('partials/head') %>
 
-<body>
+<body class="portfolio-page">
+  <%- include("partials/navbar") %>
+
   <%
     const totalValue = Number((portfolio && portfolio.totalValue) ?? 0);
     const dailyChange = Number((portfolio && portfolio.dailyChange) ?? 0);
     const dailyPercent = Number((portfolio && portfolio.dailyPercent) ?? 0);
-    const changeClass = dailyChange >= 0 ? "positive" : "negative";
     const holdings = (portfolio && Array.isArray(portfolio.holdings)) ? portfolio.holdings : [];
   %>
 
-  <div class="header">
-    <div>📊 My Portfolio</div>
-    <div id="liveStatus" class="status bad">Live: Offline</div>
-  </div>
-
-  <div class="container">
-    <div>
-      <div class="summary-card">
-        <h2>Total Portfolio Value</h2>
-
-        <p id="liveValue" class="summary-value">
-          $<%= totalValue.toLocaleString() %>
-        </p>
-
-        <p class="<%= changeClass %>">
-          <%= dailyChange >= 0 ? "+" : "" %>$<%= Math.abs(dailyChange).toFixed(2) %>
-          (<%= dailyPercent >= 0 ? "+" : "" %><%= dailyPercent.toFixed(2) %>%)
-        </p>
-
-        <div class="muted">Auto-refresh every 3 seconds (demo).</div>
+  <main class="portfolio-shell">
+    <div class="portfolio-header">
+      <div>
+        <h1 class="portfolio-title">My Portfolio</h1>
+        <div class="portfolio-subtitle">30D daily performance + today’s hourly updates</div>
       </div>
 
-      <div class="table-card">
-        <h2>Current Positions</h2>
-
-        <table>
-          <tr>
-            <th>Symbol</th>
-            <th>Qty</th>
-            <th>Avg Price</th>
-            <th>Live Price</th>
-            <th>Market Value</th>
-            <th>P/L</th>
-          </tr>
-
-          <% if (holdings.length === 0) { %>
-            <tr>
-              <td colspan="6" class="muted">No holdings yet.</td>
-            </tr>
-          <% } else { %>
-            <% holdings.forEach(item => { 
-              const sym = String(item.symbol || "").toUpperCase();
-              const qty = Number(item.qty ?? 0);
-              const avg = Number(item.avg ?? 0);
-            %>
-              <tr data-symbol="<%= sym %>">
-                <td><%= sym %></td>
-                <td class="qty"><%= qty %></td>
-
-                <!-- NEW: store avg in a hidden data attribute so JS can calculate P/L -->
-                <td class="avg" data-avg="<%= avg %>">$<%= avg.toFixed(2) %></td>
-
-                <td class="livePrice muted">—</td>
-                <td class="marketValue muted">—</td>
-
-                <!-- NEW: P/L cell -->
-                <td class="pl muted">—</td>
-              </tr>
-            <% }) %>
-          <% } %>
-        </table>
-      </div>
+      <div id="liveStatusPill" class="live-pill offline">Live: Offline</div>
     </div>
 
-    <div>
-      <div class="right-card">
-        <h2>Stock Allocation</h2>
-        <canvas id="sectorChart"></canvas>
+    <div class="portfolio-grid">
+      <!-- LEFT -->
+      <div class="left-stack">
+        <section class="p-card">
+          <div class="card-row">
+            <div>
+              <div class="card-kicker">Total Portfolio Value</div>
+
+              <div id="liveValue" class="big-value">
+                $<%= totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+              </div>
+
+              <div id="liveChange" class="change-row">
+                <span class="<%= dailyChange >= 0 ? 'pos' : 'neg' %>">
+                  <%= dailyChange >= 0 ? "+" : "-" %>$<%= Math.abs(dailyChange).toFixed(2) %>
+                  (<%= dailyPercent >= 0 ? "+" : "-" %><%= Math.abs(dailyPercent).toFixed(2) %>%)
+                </span>
+              </div>
+
+              <div class="subtext">Updates hourly</div>
+            </div>
+
+            <div class="meta-right">
+              <div class="meta-title">Refresh</div>
+              <div class="meta-value">1h</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="p-card">
+          <div class="card-row">
+            <h2 class="card-title">Current Positions</h2>
+            <div class="subtext">Live price, market value, P/L</div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="p-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Qty</th>
+                  <th>Avg Price</th>
+                  <th>Live Price</th>
+                  <th>Market Value</th>
+                  <th>P/L</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <% if (holdings.length === 0) { %>
+                  <tr>
+                    <td colspan="6" class="subtext">No holdings yet.</td>
+                  </tr>
+                <% } else { %>
+                  <% holdings.forEach(item => {
+                      const sym = String(item.symbol || "").toUpperCase();
+                      const qty = Number(item.qty ?? 0);
+                      const avg = Number(item.avg ?? 0);
+                  %>
+                    <tr data-symbol="<%= sym %>">
+                      <td class="sym"><%= sym %></td>
+                      <td class="qty"><%= qty %></td>
+                      <td class="avg" data-avg="<%= avg %>">$<%= avg.toFixed(2) %></td>
+                      <td class="livePrice muted">—</td>
+                      <td class="marketValue muted">—</td>
+                      <td class="pl muted">—</td>
+                    </tr>
+                  <% }) %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
-      <div class="right-card">
-        <h2>Portfolio Performance (Live)</h2>
-        <canvas id="trendChart"></canvas>
+      <!-- RIGHT -->
+      <div class="right-stack">
+        <section class="p-card">
+          <div class="card-row">
+            <h2 class="card-title">Stock Allocation (Live)</h2>
+            <div class="subtext">By market value</div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="sectorChart"></canvas>
+          </div>
+        </section>
+
+        <section class="p-card">
+          <div class="card-row">
+            <h2 class="card-title">Portfolio Performance (30D + Today)</h2>
+            <div class="subtext">Daily history + hourly points for today</div>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </section>
       </div>
     </div>
-  </div>
+  </main>
 
   <script>
+    const liveValueText = document.getElementById("liveValue");
+    const liveStatusPill = document.getElementById("liveStatusPill");
+
     const sectorCtx = document.getElementById("sectorChart").getContext("2d");
     const trendCtx = document.getElementById("trendChart").getContext("2d");
-    const liveValueText = document.getElementById("liveValue");
-    const liveStatus = document.getElementById("liveStatus");
 
     function setStatus(ok) {
-        liveStatus.classList.toggle("ok", ok);
-        liveStatus.classList.toggle("bad", !ok);
-        liveStatus.textContent = ok ? "Live: Connected" : "Live: Offline";
+      if (ok) {
+        liveStatusPill.textContent = "Live: Connected";
+        liveStatusPill.classList.remove("offline");
+        liveStatusPill.classList.add("online");
+      } else {
+        liveStatusPill.textContent = "Live: Offline";
+        liveStatusPill.classList.remove("online");
+        liveStatusPill.classList.add("offline");
+      }
     }
 
-    const REFRESH_MS = 3000;
-    const LIVE_WINDOW_POINTS = 20;
+    function formatMoney(n) {
+      const x = Number(n || 0);
+      return "$" + x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-    // stable colors
-    const DONUT_COLORS = ["#4caf50","#03a9f4","#ff9800","#e91e63","#9c27b0","#8bc34a","#ffc107","#00bcd4"];
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
 
-    // -------- DONUT: Allocation ----------
-    let sectorChart = new Chart(sectorCtx, {
-        type: "doughnut",
-        data: {
-        labels: [],
-        datasets: [{ data: [], backgroundColor: DONUT_COLORS }]
-        },
-        options: {
+    function currentHourKey(d = new Date()) {
+      // Key like "2026-01-28 14"
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}`;
+    }
+
+    function currentHourLabel(d = new Date()) {
+      // Label like "Today 14:00"
+      return `Today ${pad2(d.getHours())}:00`;
+    }
+
+    const sectorChart = new Chart(sectorCtx, {
+      type: "doughnut",
+      data: { labels: [], datasets: [{ data: [] }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
         animation: false,
-        plugins: { legend: { labels: { color: "#ddd" } } }
+        plugins: {
+          legend: { labels: { color: "rgba(255,255,255,0.75)" } }
         }
+      }
     });
 
-    // -------- LINE: Performance ----------
-    // We will store:
-    // - history series (30 days) from /api/portfolio-history
-    // - then a "LIVE" tail that updates every 3 seconds
-    let historyLabels = [];
-    let historyValues = [];
-    let liveLabels = [];
-    let liveValues = [];
-
-    let trendChart = new Chart(trendCtx, {
-        type: "line",
-        data: {
-        labels: [],
-        datasets: [{
-            label: "Portfolio Value",
-            data: [],
-            borderColor: "#00eaff",
-            borderWidth: 3,
-            tension: 0.3,
-            pointRadius: 0
-        }]
-        },
-        options: {
+    const trendChart = new Chart(trendCtx, {
+      type: "line",
+      data: { labels: [], datasets: [{ label: "Portfolio Value", data: [] }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
         animation: false,
-        plugins: { legend: { labels: { color: "#ddd" } } },
         scales: {
-            x: { ticks: { color: "#aaa" }, grid: { color: "rgba(255,255,255,0.06)" } },
-            y: { ticks: { color: "#aaa" }, grid: { color: "rgba(255,255,255,0.06)" } }
+          x: { ticks: { color: "rgba(255,255,255,0.65)" }, grid: { color: "rgba(255,255,255,0.08)" } },
+          y: { ticks: { color: "rgba(255,255,255,0.65)" }, grid: { color: "rgba(255,255,255,0.08)" } }
+        },
+        plugins: {
+          legend: { labels: { color: "rgba(255,255,255,0.75)" } }
         }
-        }
+      }
     });
 
-    function redrawTrend() {
-        const labels = [...historyLabels, ...liveLabels];
-        const values = [...historyValues, ...liveValues];
-        trendChart.data.labels = labels;
-        trendChart.data.datasets[0].data = values;
-        trendChart.update();
-    }
-
-    // -------- TABLE UPDATE (Live Price + MV + P/L) ----------
     function updateHoldingsTable(allocation) {
-        const bySymbol = new Map();
-        allocation.forEach(a => {
-        const sym = String(a.symbol || "").toUpperCase();
-        bySymbol.set(sym, a);
-        });
+      const bySymbol = new Map();
+      allocation.forEach(a => bySymbol.set(String(a.symbol || "").toUpperCase(), a));
 
-        document.querySelectorAll("tr[data-symbol]").forEach(row => {
+      document.querySelectorAll("tr[data-symbol]").forEach(row => {
         const sym = row.getAttribute("data-symbol");
+        const info = bySymbol.get(sym);
+        if (!info) return;
 
         const qty = Number(row.querySelector(".qty")?.textContent || 0);
         const avg = Number(row.querySelector(".avg")?.getAttribute("data-avg") || 0);
-
-        const info = bySymbol.get(sym);
-        if (!info) return;
 
         const livePrice = Number(info.price);
         const mv = Number(info.value);
@@ -223,138 +225,131 @@
         const mvCell = row.querySelector(".marketValue");
         const plCell = row.querySelector(".pl");
 
-        // Live Price
         if (Number.isFinite(livePrice)) {
-            liveCell.classList.remove("muted");
-            if (info.stale) {
-            liveCell.innerHTML = "$" + livePrice.toFixed(2) + ' <span class="badge stale">stale</span>';
-            } else {
-            liveCell.textContent = "$" + livePrice.toFixed(2);
-            }
+          liveCell.classList.remove("muted");
+          liveCell.textContent = formatMoney(livePrice);
         } else {
-            liveCell.classList.add("muted");
-            liveCell.textContent = "—";
+          liveCell.classList.add("muted");
+          liveCell.textContent = "—";
         }
 
-        // Market Value
         if (Number.isFinite(mv)) {
-            mvCell.classList.remove("muted");
-            mvCell.textContent = "$" + mv.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-            });
+          mvCell.classList.remove("muted");
+          mvCell.textContent = formatMoney(mv);
         } else {
-            mvCell.classList.add("muted");
-            mvCell.textContent = "—";
+          mvCell.classList.add("muted");
+          mvCell.textContent = "—";
         }
 
-        // P/L = (Live Price - Avg Price) * Qty
         if (Number.isFinite(livePrice) && Number.isFinite(avg) && Number.isFinite(qty)) {
-            const pl = (livePrice - avg) * qty;
-
-            plCell.classList.remove("muted");
-            plCell.classList.toggle("pl-pos", pl >= 0);
-            plCell.classList.toggle("pl-neg", pl < 0);
-
-            const sign = pl >= 0 ? "+" : "-";
-            plCell.textContent = sign + "$" + Math.abs(pl).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-            });
+          const pl = (livePrice - avg) * qty;
+          const sign = pl >= 0 ? "+" : "-";
+          plCell.classList.remove("muted");
+          plCell.classList.toggle("pl-pos", pl >= 0);
+          plCell.classList.toggle("pl-neg", pl < 0);
+          plCell.textContent = sign + formatMoney(Math.abs(pl));
         } else {
-            plCell.classList.add("muted");
-            plCell.classList.remove("pl-pos", "pl-neg");
-            plCell.textContent = "—";
+          plCell.classList.add("muted");
+          plCell.classList.remove("pl-pos", "pl-neg");
+          plCell.textContent = "—";
         }
-        });
+      });
     }
 
-    // -------- DONUT UPDATE (value + % label) ----------
-    function updateAllocationDonut(allocation) {
-        const values = allocation.map(a => Number(a.value || 0));
-        const total = values.reduce((sum, v) => sum + v, 0) || 1;
+    // Prevent duplicate points within the same hour
+    let lastHourKeyAdded = null;
 
-        const labels = allocation.map(a => {
-        const sym = String(a.symbol || "").toUpperCase();
-        const val = Number(a.value || 0);
-        const pct = (val / total) * 100;
-        return `${sym} (${pct.toFixed(1)}%)`;
-        });
+    function appendHourlyPoint(liveTotal) {
+      const now = new Date();
+      const key = currentHourKey(now);
+      const label = currentHourLabel(now);
 
-        sectorChart.data.labels = labels;
-        sectorChart.data.datasets[0].data = values;
-        sectorChart.update();
+      if (lastHourKeyAdded === key) return;
+
+      lastHourKeyAdded = key;
+
+      trendChart.data.labels.push(label);
+      trendChart.data.datasets[0].data.push(Number(liveTotal || 0));
+
+      // Keep chart from growing forever (30 daily + up to ~24 hourly = still fine)
+      // Just in case, cap at 80 points.
+      if (trendChart.data.labels.length > 80) {
+        trendChart.data.labels.shift();
+        trendChart.data.datasets[0].data.shift();
+      }
+
+      trendChart.update();
     }
 
-    // -------- Load REAL 30-day history first ----------
-    async function loadPortfolioHistory() {
-        try {
-        const res = await fetch("/api/portfolio-history", { cache: "no-store" });
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (!data || data.error) return;
-
-        const labels = Array.isArray(data.labels) ? data.labels : [];
-        const values = Array.isArray(data.values) ? data.values.map(Number) : [];
-
-        historyLabels = labels;
-        historyValues = values.filter(v => Number.isFinite(v));
-
-        // If history is missing/empty, don't break chart
-        redrawTrend();
-        } catch {}
-    }
-
-    // -------- Add live tail points ----------
-    function pushLivePoint(totalValue) {
-        const timeNow = new Date().toLocaleTimeString();
-        liveLabels.push("LIVE " + timeNow);
-        liveValues.push(totalValue);
-
-        while (liveLabels.length > LIVE_WINDOW_POINTS) {
-        liveLabels.shift();
-        liveValues.shift();
-        }
-
-        redrawTrend();
-    }
-
-    // -------- Fetch Live (every 3 sec) ----------
-    async function fetchLivePortfolio() {
-        try {
-        const res = await fetch("/api/portfolio-live", { cache: "no-store" });
+    async function fetchLivePortfolioAndUpdateUI(addHourlyPoint = false) {
+      try {
+        const res = await fetch("/api/portfolio-live");
         if (!res.ok) { setStatus(false); return; }
 
         const data = await res.json();
-        if (!data || data.error) { setStatus(false); return; }
+        if (!data || data.ok === false) { setStatus(false); return; }
 
         setStatus(true);
 
         const liveTotal = Number(data.totalValue || 0);
-        liveValueText.innerText = "$" + liveTotal.toLocaleString();
+        liveValueText.textContent = formatMoney(liveTotal);
 
         if (Array.isArray(data.allocation)) {
-            updateAllocationDonut(data.allocation);
-            updateHoldingsTable(data.allocation);
+          sectorChart.data.labels = data.allocation.map(a => String(a.symbol || "").toUpperCase());
+          sectorChart.data.datasets = [{ data: data.allocation.map(a => Number(a.value || 0)) }];
+          sectorChart.update();
+
+          updateHoldingsTable(data.allocation);
         }
 
-        pushLivePoint(liveTotal);
-        } catch {
-        setStatus(false);
+        if (addHourlyPoint) {
+          appendHourlyPoint(liveTotal);
         }
+      } catch {
+        setStatus(false);
+      }
     }
 
-    // ---- boot sequence ----
-    (async function init() {
-        // 1) load 30 day history first
-        await loadPortfolioHistory();
+    async function loadPortfolioHistory30D() {
+      try {
+        const res = await fetch("/api/portfolio-history");
+        if (!res.ok) return;
 
-        // 2) start live updates
-        await fetchLivePortfolio();
-        setInterval(fetchLivePortfolio, REFRESH_MS);
+        const data = await res.json();
+        if (!data || !Array.isArray(data.labels) || !Array.isArray(data.values)) return;
+
+        // Seed daily history first
+        trendChart.data.labels = data.labels.slice();
+        trendChart.data.datasets[0].data = data.values.slice();
+        trendChart.update();
+      } catch {}
+    }
+
+    function msUntilNextHour() {
+      const now = new Date();
+      const next = new Date(now);
+      next.setMinutes(0, 0, 0);
+      next.setHours(now.getHours() + 1);
+      return Math.max(1000, next - now);
+    }
+
+    // init
+    setStatus(false);
+
+    (async function initPortfolio() {
+      await loadPortfolioHistory30D();
+
+      // Do one live fetch now (updates value/table/pie), and also add the first hourly point for today
+      await fetchLivePortfolioAndUpdateUI(true);
+
+      // Then schedule hourly updates exactly on the next hour boundary
+      setTimeout(() => {
+        fetchLivePortfolioAndUpdateUI(true);
+
+        // every hour after that
+        setInterval(() => fetchLivePortfolioAndUpdateUI(true), 60 * 60 * 1000);
+      }, msUntilNextHour());
     })();
-    </script>
-
+  </script>
 </body>
 </html>

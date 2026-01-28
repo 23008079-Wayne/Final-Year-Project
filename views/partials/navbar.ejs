@@ -23,23 +23,24 @@
           </li>
         <% } else { %>
           <li class="nav-item">
-            <a class="nav-link" href="/">
-              <i class="fas fa-chart-line"></i> Market Dashboard
+            <a class="nav-link" href="/portfolio">
+              <i class="fas fa-chart-line"></i> My Portfolio
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/account">
-              <i class="fas fa-briefcase"></i> My Account
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="/stocks">
-              <i class="fas fa-chart-line"></i> My Stocks
+            <a class="nav-link" href="/market">
+              <i class="fas fa-chart-line"></i> Market
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/profile">
               <i class="fas fa-user-circle"></i> My Profile
+            </a>
+          </li>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/account">
+              <i class="fas fa-briefcase"></i> My Account
             </a>
           </li>
           <% if (currentUser.roleId === 2) { %>

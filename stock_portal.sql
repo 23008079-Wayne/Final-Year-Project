@@ -354,3 +354,208 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+CREATE DATABASE IF NOT EXISTS `stock_portal`
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
+
+USE `stock_portal`;
+
+-- --------------------------------------------------------
+-- roles
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `roles` (
+  `roleId` int(11) NOT NULL AUTO_INCREMENT,
+  `roleName` varchar(50) NOT NULL,
+  PRIMARY KEY (`roleId`),
+  UNIQUE KEY `roleName` (`roleName`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT IGNORE INTO `roles` (`roleId`, `roleName`) VALUES
+(2, 'admin'),
+(1, 'user');
+
+-- --------------------------------------------------------
+-- users
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `users` (
+  `userId` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(100) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `roleId` int(11) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `isFrozen` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`userId`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`),
+  KEY `fk_users_roles` (`roleId`),
+  CONSTRAINT `fk_users_roles` FOREIGN KEY (`roleId`) REFERENCES `roles` (`roleId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- user_profiles (1-to-1 with users)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_profiles` (
+  `profileId` int(11) NOT NULL AUTO_INCREMENT,
+  `userId` int(11) NOT NULL,
+  `fullName` varchar(150) DEFAULT NULL,
+  `bio` text DEFAULT NULL,
+  `phone` varchar(30) DEFAULT NULL,
+  `avatar` varchar(255) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `walletAddress` varchar(255) DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`profileId`),
+  UNIQUE KEY `uniq_user_profiles_userId` (`userId`),
+  KEY `fk_profile_user` (`userId`),
+  CONSTRAINT `fk_profile_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- user_risk_profiles (1-to-1 with users)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_risk_profiles` (
+  `riskProfileId` int(11) NOT NULL AUTO_INCREMENT,
+  `userId` int(11) NOT NULL,
+  `riskTolerance` varchar(50) DEFAULT NULL,
+  `investmentExperience` varchar(50) DEFAULT NULL,
+  `investmentGoal` varchar(255) DEFAULT NULL,
+  `timeHorizon` varchar(50) DEFAULT NULL,
+  `annualIncome` decimal(15,2) DEFAULT NULL,
+  `netWorth` decimal(15,2) DEFAULT NULL,
+  `age` int(11) DEFAULT NULL,
+  `completedAt` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`riskProfileId`),
+  UNIQUE KEY `uniq_user_risk_userId` (`userId`),
+  KEY `fk_risk_user` (`userId`),
+  CONSTRAINT `fk_risk_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- accounts
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `accounts` (
+  `accountId` int(11) NOT NULL AUTO_INCREMENT,
+  `userId` int(11) NOT NULL,
+  `accountNumber` varchar(50) NOT NULL,
+  `accountType` varchar(50) DEFAULT 'personal',
+  `accountStatus` varchar(50) DEFAULT 'active',
+  `balance` decimal(15,2) DEFAULT 0.00,
+  `totalInvested` decimal(15,2) DEFAULT 0.00,
+  `totalReturns` decimal(15,2) DEFAULT 0.00,
+  `currency` varchar(10) DEFAULT 'USD',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`accountId`),
+  UNIQUE KEY `accountNumber` (`accountNumber`),
+  KEY `fk_account_user` (`userId`),
+  CONSTRAINT `fk_account_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- account_stocks
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `account_stocks` (
+  `accountStockId` int(11) NOT NULL AUTO_INCREMENT,
+  `accountId` int(11) NOT NULL,
+  `stockSymbol` varchar(10) NOT NULL,
+  `stockName` varchar(150) NOT NULL,
+  `quantity` int(11) NOT NULL DEFAULT 0,
+  `purchasePrice` decimal(10,2) NOT NULL,
+  `currentPrice` decimal(10,2) NOT NULL,
+  `totalCost` decimal(15,2) NOT NULL,
+  `currentValue` decimal(15,2) NOT NULL,
+  `gainLoss` decimal(15,2) NOT NULL,
+  `gainLossPercent` decimal(5,2) NOT NULL,
+  `purchaseDate` timestamp NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`accountStockId`),
+  KEY `fk_account_stock` (`accountId`),
+  KEY `stockSymbol` (`stockSymbol`),
+  CONSTRAINT `fk_account_stock` FOREIGN KEY (`accountId`) REFERENCES `accounts` (`accountId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- WATCHLIST
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `user_watchlist` (
+  `watchlistId` INT NOT NULL AUTO_INCREMENT,
+  `userId` INT NOT NULL,
+  `symbol` VARCHAR(16) NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`watchlistId`),
+  UNIQUE KEY `uniq_user_symbol` (`userId`, `symbol`),
+  KEY `idx_watchlist_user` (`userId`),
+  CONSTRAINT `fk_watchlist_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- HOLDINGS (current portfolio)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `user_holdings` (
+  `holdingId` INT NOT NULL AUTO_INCREMENT,
+  `userId` INT NOT NULL,
+  `symbol` VARCHAR(16) NOT NULL,
+  `qty` DECIMAL(12,4) NOT NULL DEFAULT 0,
+  `avgPrice` DECIMAL(12,4) NOT NULL DEFAULT 0,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`holdingId`),
+  UNIQUE KEY `uniq_hold_user_symbol` (`userId`, `symbol`),
+  KEY `idx_holdings_user` (`userId`),
+  KEY `idx_hold_user_symbol` (`userId`, `symbol`),
+  CONSTRAINT `fk_holdings_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- TRANSACTIONS (audit trail)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `stock_transactions` (
+  `txId` INT NOT NULL AUTO_INCREMENT,
+  `userId` INT NOT NULL,
+  `symbol` VARCHAR(16) NOT NULL,
+  `txType` ENUM('BUY','SELL') NOT NULL DEFAULT 'BUY',
+  `qty` DECIMAL(12,4) NOT NULL,
+  `price` DECIMAL(12,4) NOT NULL,
+  `dataSource` ENUM('finnhub','yahoo','cache') DEFAULT NULL,
+  `isStale` TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`txId`),
+  KEY `idx_tx_user` (`userId`),
+  KEY `idx_tx_symbol` (`symbol`),
+  KEY `idx_tx_user_symbol_time` (`userId`, `symbol`, `created_at`),
+  CONSTRAINT `fk_tx_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- OPTIONAL OVERRIDE: stock risk classification
+-- You do NOT need to fill this for all stocks.
+-- If not found, your app.js will compute risk LIVE by volatility.
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `stock_risk_classification` (
+  `symbol` VARCHAR(16) NOT NULL,
+  `riskLevel` ENUM('Conservative','Moderate','Aggressive') NOT NULL DEFAULT 'Medium',
+  `method` ENUM('manual','auto') NOT NULL DEFAULT 'manual',
+  `note` VARCHAR(255) DEFAULT NULL,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`symbol`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Seed a few manual overrides (optional)
+INSERT INTO stock_risk_classification (symbol, riskLevel, method, note) VALUES
+('TSLA','Aggressive','manual','Manual override (high volatility)'),
+('NVDA','Aggressive','manual','Manual override (high volatility)')
+ON DUPLICATE KEY UPDATE
+  riskLevel = VALUES(riskLevel),
+  method = VALUES(method),
+  note = VALUES(note);
+
+COMMIT;
