@@ -34,6 +34,8 @@ const apiController = require("./controllers/apiController");
 const marketController = require("./controllers/marketController");
 const portfolioController = require("./controllers/portfolioController");
 const watchlistController = require("./controllers/watchlistController");
+const alertsController = require("./controllers/alertsController");
+const { getCalendarEvents } = require("./controllers/economicCalendarController");
 const newsController = require("./controllers/newsController");
 const sentimentController = require("./controllers/sentimentController");
 
@@ -150,7 +152,6 @@ portfolioController.init({ quoteController });
 app.get("/api/health", apiController.health);
 app.get("/api/ticker", apiController.ticker);
 app.get("/api/page-quotes", apiController.pageQuotes);
-app.get("/api/quote/:symbol", apiController.singleQuote);
 app.get("/api/news/:symbol", newsController.getNews);
 
 /* Pages */
@@ -166,12 +167,31 @@ app.get("/api/portfolio-history", checkAuthenticated, portfolioController.histor
 /* News & Sentiment routes */
 app.get("/api/news/:symbol", newsController.getNews);
 app.post("/api/analyze-sentiment", sentimentController.analyzeText);
+app.get("/api/analyze-sentiment", sentimentController.getMarketInsights);
 
 /* Watchlist routes */
 app.get("/watchlist", checkAuthenticated, watchlistController.getWatchlist);
 app.post("/watchlist", checkAuthenticated, watchlistController.addToWatchlist);
 app.delete("/watchlist/:symbol", checkAuthenticated, watchlistController.removeFromWatchlist);
 
+// Watchlist JSON API endpoints
+app.get("/api/watchlist", checkAuthenticated, watchlistController.getWatchlistApi);
+app.post("/api/watchlist", checkAuthenticated, watchlistController.addToWatchlistApi);
+app.put("/api/watchlist/:symbol", checkAuthenticated, watchlistController.updateWatchlistApi);
+app.delete("/api/watchlist/:symbol", checkAuthenticated, watchlistController.removeFromWatchlistApi);
+
+// Stock quote endpoint (PUBLIC - used by watchlist validation and price updates)
+app.get("/api/quote/:symbol", quoteController.getQuote);
+
+// Price alerts (tab + standalone)
+app.get("/alerts", checkAuthenticated, alertsController.page);
+app.get("/api/alerts", checkAuthenticated, alertsController.listAlerts);
+app.post("/api/alerts", checkAuthenticated, alertsController.createAlert);
+app.put("/api/alerts/:alertId", checkAuthenticated, alertsController.updateAlert);
+app.delete("/api/alerts/:alertId", checkAuthenticated, alertsController.deleteAlert);
+
+// Economic calendar API (tab)
+app.get("/api/economic-calendar", getCalendarEvents);
 /* Trade route */
 app.get("/trade", checkAuthenticated, (req, res) => {
   res.render("trade", { title: "Trade", currentUser: res.locals.currentUser });
