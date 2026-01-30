@@ -30,7 +30,7 @@ async function getUserHoldingsFromDb(userId) {
     const [rows] = await db
       .promise()
       .query(
-        "SELECT symbol, qty, avgPrice AS avg FROM user_holdings WHERE userId = ? ORDER BY symbol ASC",
+        "SELECT symbol, qty, avgPrice AS avg FROM user_holdings WHERE userId = ? AND qty > 0 ORDER BY symbol ASC",
         [userId]
       );
 

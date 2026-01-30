@@ -336,6 +336,22 @@
     // init
     setStatus(false);
 
+    async function cleanupInvalidHoldings() {
+      try {
+        const res = await fetch('/api/cleanup-invalid-holdings', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert('Invalid holdings cleaned up. Refreshing portfolio...');
+          location.reload();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        console.error('Cleanup error:', error);
+        alert('Error cleaning up holdings');
+      }
+    }
+
     (async function initPortfolio() {
       await loadPortfolioHistory30D();
 

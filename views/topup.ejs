@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Top Up Wallet - Marketmind</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0b0b0b 0%, #1a1a2e 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .topup-container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: var(--secondary-bg);
+            border: 1px solid var(--tertiary-bg);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .topup-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .topup-header h1 {
+            color: var(--accent);
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .topup-header p {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: var(--tertiary-bg);
+            border: 1px solid var(--tertiary-bg);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: rgba(0, 234, 255, 0.05);
+        }
+
+        .amount-presets {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .amount-btn {
+            padding: 10px;
+            background: var(--tertiary-bg);
+            border: 2px solid var(--tertiary-bg);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .amount-btn:hover,
+        .amount-btn.active {
+            border-color: var(--accent);
+            background: rgba(0, 234, 255, 0.1);
+            color: var(--accent);
+        }
+
+        #card-element {
+            padding: 12px;
+            background: var(--tertiary-bg);
+            border: 1px solid var(--tertiary-bg);
+            border-radius: 6px;
+            margin-bottom: 24px;
+        }
+
+        .stripe-element {
+            color: var(--text-primary) !important;
+        }
+
+        .stripe-element::placeholder {
+            color: var(--text-secondary) !important;
+        }
+
+        .StripeElement {
+            background: var(--tertiary-bg) !important;
+            border-radius: 4px;
+            color: #ffffff !important;
+        }
+
+        .payment-method-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .payment-method-btn {
+            padding: 14px;
+            background: var(--tertiary-bg);
+            border: 2px solid var(--tertiary-bg);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .payment-method-btn:hover,
+        .payment-method-btn.active {
+            border-color: var(--accent);
+            background: rgba(0, 234, 255, 0.1);
+            color: var(--accent);
+        }
+
+        .payment-form-section {
+            display: none;
+        }
+
+        .payment-form-section.active {
+            display: block;
+        }
+
+        .btn-topup {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), #00d4ff);
+            border: none;
+            border-radius: 6px;
+            color: #0b0b0b;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .btn-topup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 234, 255, 0.3);
+        }
+
+        .btn-topup:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-topup.hidden {
+            display: none;
+        }
+
+        #paypal-button-container {
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-4px);
+        }
+
+        .error-message {
+            background: rgba(255, 68, 102, 0.1);
+            border: 1px solid #ff4466;
+            color: #ff4466;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .security-info {
+            background: rgba(0, 234, 255, 0.05);
+            border: 1px solid var(--tertiary-bg);
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 234, 255, 0.3);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/navbar') %>
+
+    <div class="topup-container">
+        <a href="/account" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Account
+        </a>
+
+        <div class="topup-header">
+            <h1><i class="fas fa-wallet"></i> Top Up Wallet</h1>
+            <p>Add funds to your trading account</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <form id="topupForm">
+            <div class="form-group">
+                <label for="amount">Amount (USD)</label>
+                <input type="number" id="amount" name="amount" placeholder="Enter amount" min="10" max="50000" step="0.01" required>
+            </div>
+
+            <div class="form-group">
+                <label>Quick Amount</label>
+                <div class="amount-presets">
+                    <button type="button" class="amount-btn" data-amount="50">$50</button>
+                    <button type="button" class="amount-btn" data-amount="100">$100</button>
+                    <button type="button" class="amount-btn" data-amount="250">$250</button>
+                    <button type="button" class="amount-btn" data-amount="500">$500</button>
+                    <button type="button" class="amount-btn" data-amount="1000">$1,000</button>
+                    <button type="button" class="amount-btn" data-amount="5000">$5,000</button>
+                </div>
+            </div>
+
+            <!-- Payment Method Selection -->
+            <div class="form-group">
+                <label>Payment Method</label>
+                <div class="payment-method-selector">
+                    <button type="button" class="payment-method-btn active" data-method="stripe" onclick="switchPaymentMethod('stripe', event)">
+                        <i class="fas fa-credit-card"></i> Card
+                    </button>
+                    <button type="button" class="payment-method-btn" data-method="paypal" onclick="switchPaymentMethod('paypal', event)">
+                        <i class="fab fa-paypal"></i> PayPal
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stripe Payment Section -->
+            <div id="stripe-section" class="payment-form-section active">
+                <div class="form-group">
+                    <label for="card-element">Card Details</label>
+                    <div id="card-element"></div>
+                    <div id="card-errors" style="color: #ff4466; margin-top: 8px;"></div>
+                </div>
+            </div>
+
+            <!-- PayPal Payment Section -->
+            <div id="paypal-section" class="payment-form-section">
+                <div style="background: rgba(0,234,255,0.05); border: 1px solid var(--tertiary-bg); padding: 16px; border-radius: 6px; margin-bottom: 20px;">
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 12px;">
+                        You will be redirected to PayPal to complete the payment securely.
+                    </p>
+                    <button type="button" id="paypal-pay-btn" class="btn-topup" style="background: linear-gradient(135deg, #0070ba, #003087);">
+                        <i class="fab fa-paypal"></i>
+                        Pay with PayPal
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-topup" id="submitBtn">
+                <span class="loading-spinner" id="spinner"></span>
+                <i class="fas fa-check-circle"></i>
+                Complete Payment
+            </button>
+
+            <div class="security-info" id="securityInfo">
+                <i class="fas fa-lock"></i> Your payment is secured by Stripe. No card details are stored on our servers.
+            </div>
+        </form>
+    </div>
+
+    <script>
+        console.log('Top-up page loaded with server-side PayPal integration');
+        
+        // Handle PayPal payment button click
+        const paypalBtn = document.getElementById('paypal-pay-btn');
+        if (paypalBtn) {
+            paypalBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                
+                const amount = document.getElementById('amount').value;
+                const errorDiv = document.getElementById('errorMessage');
+                const successDiv = document.getElementById('successMessage');
+                
+                errorDiv.style.display = 'none';
+                successDiv.style.display = 'none';
+                
+                // Validate amount
+                if (!amount || parseFloat(amount) < 10) {
+                    errorDiv.textContent = 'Please enter an amount of at least $10';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                console.log('Creating PayPal order for amount:', amount);
+                paypalBtn.disabled = true;
+                paypalBtn.innerHTML = '<span style="display:inline-block; width:16px; height:16px; border:3px solid rgba(255,255,255,0.3); border-top:3px solid white; border-radius:50%; animation:spin 1s linear infinite; margin-right:8px;"></span>Processing...';
+                
+                try {
+                    // Create order on server
+                    const response = await fetch('/api/paypal/create-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            amount: parseFloat(amount)
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    console.log('PayPal order response:', data);
+                    
+                    if (!data.success || !data.approveUrl) {
+                        throw new Error(data.error || 'Failed to create payment order');
+                    }
+                    
+                    // Redirect to PayPal for approval
+                    console.log('Redirecting to PayPal approval URL');
+                    window.location.href = data.approveUrl;
+                    
+                } catch (error) {
+                    console.error('PayPal error:', error);
+                    errorDiv.textContent = 'Error: ' + error.message;
+                    errorDiv.style.display = 'block';
+                    paypalBtn.disabled = false;
+                    paypalBtn.innerHTML = '<i class="fab fa-paypal"></i> Pay with PayPal';
+                }
+            });
+        }
+
+        // Initialize Stripe
+        const stripe = Stripe('pk_test_51234567890'); // Test key
+        const elements = stripe.elements();
+        const cardElement = elements.create('card', {
+            style: {
+                base: {
+                    fontFamily: '"Segoe UI", sans-serif',
+                    fontSize: '16px',
+                    color: '#ffffff',
+                    '::placeholder': {
+                        color: '#888888'
+                    }
+                },
+                invalid: {
+                    color: '#ff4466'
+                }
+            }
+        });
+
+        cardElement.mount('#card-element');
+        console.log('Stripe card element mounted');
+
+        // Handle card errors
+        cardElement.on('change', function(event) {
+            const displayError = document.getElementById('card-errors');
+            if (event.error) {
+                displayError.textContent = event.error.message;
+                displayError.style.color = '#ff4466';
+            } else {
+                displayError.textContent = '';
+            }
+        });
+
+        // Amount preset buttons
+        document.querySelectorAll('.amount-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const amount = btn.dataset.amount;
+                console.log('Amount preset clicked:', amount);
+                document.getElementById('amount').value = amount;
+                document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                console.log('Amount field updated to:', document.getElementById('amount').value);
+            });
+        });
+
+        // Switch payment method
+        function switchPaymentMethod(method, e) {
+            console.log('Payment method switched to:', method);
+            e.preventDefault();
+            
+            document.querySelectorAll('.payment-method-btn').forEach(btn => btn.classList.remove('active'));
+            e.target.closest('.payment-method-btn').classList.add('active');
+            
+            document.querySelectorAll('.payment-form-section').forEach(section => section.classList.remove('active'));
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const securityInfo = document.getElementById('securityInfo');
+            
+            if (method === 'stripe') {
+                console.log('Showing Stripe section');
+                document.getElementById('stripe-section').classList.add('active');
+                submitBtn.classList.remove('hidden');
+                securityInfo.innerHTML = '<i class="fas fa-lock"></i> Your payment is secured by Stripe. No card details are stored on our servers.';
+            } else if (method === 'paypal') {
+                console.log('Showing PayPal section');
+                document.getElementById('paypal-section').classList.add('active');
+                submitBtn.classList.add('hidden');
+                securityInfo.innerHTML = '<i class="fas fa-lock"></i> Your payment is secured by PayPal. You will be redirected to PayPal to complete the transaction.';
+            }
+        }
+
+        // Form submission (for Stripe only)
+        document.getElementById('topupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Check if PayPal is selected - skip form submission if so
+            const activeMethod = document.querySelector('.payment-method-btn.active').dataset.method;
+            if (activeMethod === 'paypal') {
+                return; // PayPal button handles submission
+            }
+
+            const amount = parseFloat(document.getElementById('amount').value);
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            const submitBtn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('spinner');
+
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            if (!amount || amount < 10) {
+                errorDiv.textContent = 'Minimum amount is $10';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            spinner.style.display = 'block';
+
+            try {
+                // Create payment method with card
+                const { paymentMethod, error } = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: cardElement,
+                    billing_details: {
+                        // Add billing details if needed
+                    }
+                });
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+
+                // Process the top up on backend
+                const response = await fetch('/api/topup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        paymentMethodId: paymentMethod.id,
+                        paymentMethod: 'stripe'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    successDiv.textContent = `✓ Success! $${amount.toFixed(2)} has been added to your wallet.`;
+                    successDiv.style.display = 'block';
+                    
+                    // Clear form
+                    document.getElementById('topupForm').reset();
+                    cardElement.clear();
+                    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/account?topup=success';
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Payment failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

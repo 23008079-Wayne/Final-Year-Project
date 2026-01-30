@@ -78,10 +78,28 @@ async function pageQuotes(req, res) {
 async function singleQuote(req, res) {
   try {
     const symbol = String(req.params.symbol || "").toUpperCase();
+    
+    if (!symbol || symbol.length === 0) {
+      return res.status(400).json({ error: "Symbol required" });
+    }
+
     const { quote, stale, source } = await quoteController.getQuoteABCached(symbol);
+    
+    // Validate that we have a valid price
+    const price = quote?.c;
+    if (!Number.isFinite(price) || price <= 0) {
+      return res.status(404).json({ 
+        error: "Quote unavailable for symbol",
+        symbol: symbol,
+        source: source,
+        stale: stale
+      });
+    }
+    
     res.json({ ...quote, stale, source });
-  } catch {
-    res.status(500).json({ error: "Live quote unavailable" });
+  } catch (error) {
+    console.error('[apiController.singleQuote]', error.message);
+    res.status(500).json({ error: "Live quote unavailable", details: error.message });
   }
 }
 

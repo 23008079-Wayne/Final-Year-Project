@@ -103,7 +103,7 @@ exports.register = async (req, res) => {
       .promise()
       .query(
         'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-        [userId, accountNumber, 'Trading', 'active', 10000.00, 0, 0, 'USD']
+        [userId, accountNumber, 'Trading', 'active', 0, 0, 0, 'USD']
       );
 
     console.log("DEBUG: Registration complete, redirecting to login");
@@ -187,7 +187,7 @@ exports.login = async (req, res) => {
         const accountNumber = `ACC-${user.userId}-${Date.now()}`;
         await db.promise().query(
           'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-          [user.userId, accountNumber, 'Trading', 'active', 10000.00, 0, 0, 'USD']
+          [user.userId, accountNumber, 'Trading', 'active', 0, 0, 0, 'USD']
         );
         console.log("DEBUG: Account created successfully");
       }

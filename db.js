@@ -4,16 +4,16 @@ const mysql = require('mysql2');
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',          // change if needed
-  password: 'Republic_C207',          // change if needed
+  password: '',          // change if needed
   database: 'stock_portal'
 });
 
 db.connect((err) => {
   if (err) {
-    console.error('Error connecting to MySQL:', err);
-    process.exit(1);
+    console.warn('⚠️ Warning: Could not connect to MySQL:', err.code);
+    console.log('App will continue but database features may not work.');
   } else {
-    console.log('Connected to MySQL database: stock_portal');
+    console.log('✅ Connected to MySQL database: stock_portal');
   }
 });
 

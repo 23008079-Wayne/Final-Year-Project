@@ -379,6 +379,113 @@
       font-size:12px;
       background:#0f0f0f;
     }
+
+    /* News Item Styling */
+    .news-item {
+      background: #161616;
+      padding: 24px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      border-left: 5px solid #00eaff;
+      position: relative;
+      transition: 0.2s;
+    }
+
+    .news-item:hover {
+      border-color: #00eaff;
+      box-shadow: 0 0 24px rgba(0, 234, 255, 0.15);
+    }
+
+    .news-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 15px;
+      margin-bottom: 14px;
+    }
+
+    .news-item h4 {
+      margin: 0;
+      color: #00eaff;
+      font-size: 18px;
+      flex: 1;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .news-source {
+      color: #aaa;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      padding: 5px 12px;
+      background: rgba(0, 234, 255, 0.1);
+      border-radius: 6px;
+    }
+
+    .news-item p {
+      margin: 0 0 14px 0;
+      color: #bdbdbd;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .news-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .btn-analyze-news {
+      display: inline-block;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    .btn-analyze-news:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-save-news {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #00eaff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    .btn-save-news:hover {
+      background: #00d4e8;
+      transform: translateY(-2px);
+    }
+
+    .analysis-result {
+      margin-top: 14px;
+      padding: 16px;
+      background: rgba(0, 234, 255, 0.05);
+      border-radius: 10px;
+      border: 1px solid rgba(0, 234, 255, 0.2);
+      font-size: 0.95rem;
+      color: #aaa;
+      line-height: 1.5;
+    }
+
+    .trending-news-item {
+      border-left: 5px solid #ff6b35;
+      box-shadow: 0 0 24px rgba(255, 107, 53, 0.15);
+    }
   </style>
 </head>
 
@@ -720,6 +827,86 @@
         </div>
       </div>
     </div>
+
+  </div>
+
+  <!-- News & Sentiment Section - Full Width -->
+  <div style="background: #121212; border-top: 1px solid #222; border-bottom: 1px solid #222; margin-top: 40px; width:1200px; margin-left: auto; margin-right: auto;">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 40px 28px;">
+      <!-- Latest News Section -->
+      <div style="margin-bottom: 40px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+          <h2 style="margin: 0; color: #00eaff; font-size: 28px;">📰 Latest News</h2>
+          <span style="font-size: 1rem; color: #aaa;">Top stories</span>
+        </div>
+        <div id="latestNewsList" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+          <p style="color: #aaa; text-align: center;">Loading latest news...</p>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="border-top: 1px solid #222; margin: 40px 0;"></div>
+
+      <!-- Trending News Section -->
+      <div style="margin-bottom: 40px;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+          <h2 style="margin: 0; color: #00eaff; font-size: 28px;">🔥 Trending News</h2>
+          <span style="font-size: 1rem; color: #aaa;">Most talked about</span>
+        </div>
+        <div id="trendingNewsList" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+          <p style="color: #aaa; text-align: center;">Loading trending news...</p>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="border-top: 1px solid #222; margin: 40px 0;"></div>
+
+      <!-- Search Section -->
+      <div>
+        <h2 style="color: #00eaff; margin: 0 0 30px 0; font-size: 28px;">🔍 Search News</h2>
+        <div style="display: flex; gap: 12px; margin-bottom: 25px;">
+          <input 
+            type="text" 
+            id="newsSearch" 
+            placeholder="Search by ticker (AAPL) or company name (Apple)..." 
+            style="
+              flex: 1;
+              padding: 14px 18px;
+              background: #0f0f0f;
+              border: 1px solid #2a2a2a;
+              border-radius: 10px;
+              color: #eee;
+              font-family: 'Inter', Arial, sans-serif;
+              font-size: 16px;
+            "
+          />
+          <button 
+            onclick="searchNews()" 
+            style="
+              padding: 14px 32px;
+              background: #00eaff;
+              color: #000;
+              border: none;
+              border-radius: 10px;
+              font-weight: 700;
+              cursor: pointer;
+              font-size: 16px;
+              transition: 0.2s;
+            "
+            onmouseover="this.style.opacity='0.9'"
+            onmouseout="this.style.opacity='1'"
+          >
+            🔍 Search
+          </button>
+        </div>
+        <div id="newsHint" style="color: #aaa; margin-bottom: 20px; font-size: 1rem;">
+          💡 Search for ANY stock ticker or company name (AAPL, MSFT, XYZ, etc.) - Unlimited search!
+        </div>
+        <div id="newsList" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+          <!-- Search results will be added here -->
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="footer">
@@ -830,6 +1017,288 @@
       loadTicker();
       setInterval(loadTicker, REFRESH_MS);
     })();
+
+    // =========================================================
+    // NEWS & SENTIMENT FUNCTIONS
+    // =========================================================
+    async function loadLatestNews() {
+      const list = document.getElementById('latestNewsList');
+      try {
+        const tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'NFLX', 'JPM', 'V'];
+        const allArticles = [];
+
+        for (const ticker of tickers) {
+          try {
+            const response = await fetch(`/api/news/${ticker}`);
+            const articles = await response.json();
+            if (articles && articles.length > 0) {
+              allArticles.push(...articles);
+            }
+          } catch (e) {
+            console.warn(`Error fetching news for ${ticker}`);
+          }
+        }
+
+        if (allArticles.length === 0) {
+          list.innerHTML = '<p style="color: #aaa; text-align: center;">No news available at the moment.</p>';
+          return;
+        }
+
+        const newsHtml = allArticles
+          .slice(0, 5)
+          .map((article, index) => `
+            <div class="news-item" id="latest-news-${index}">
+              <div class="news-header">
+                <h4>${article.title}</h4>
+                <span class="news-source">${article.source}</span>
+              </div>
+              <p>${article.description}</p>
+              <div class="news-actions">
+                <button class="btn-analyze-news" onclick="analyzeNewsArticle(${index}, '${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
+                  Analyse
+                </button>
+                <button class="btn-save-news" id="save-latest-${index}" style="display: none;" onclick="saveNewsAsAnalysis('${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
+                  Save Analysis
+                </button>
+              </div>
+              <div class="analysis-result" id="analysis-latest-${index}" style="display: none;"></div>
+            </div>
+          `).join('');
+
+        list.innerHTML = newsHtml;
+      } catch (error) {
+        console.error('Error loading latest news:', error);
+        list.innerHTML = '<p style="color: #e53935; text-align: center;">Error loading latest news.</p>';
+      }
+    }
+
+    async function loadTrendingNews() {
+      const list = document.getElementById('trendingNewsList');
+      try {
+        const trendingTickers = ['NVDA', 'PLTR', 'DDOG', 'NET', 'COIN', 'MSTR', 'ARM', 'SMCI'];
+        const allTrendingArticles = [];
+
+        for (const ticker of trendingTickers) {
+          try {
+            const response = await fetch(`/api/news/${ticker}`);
+            const articles = await response.json();
+            if (articles && articles.length > 0) {
+              articles.forEach(art => art.ticker = ticker);
+              allTrendingArticles.push(...articles);
+            }
+          } catch (e) {
+            console.warn(`Error fetching trending news for ${ticker}`);
+          }
+        }
+
+        if (allTrendingArticles.length === 0) {
+          list.innerHTML = '<p style="color: #aaa; text-align: center;">No trending news available at the moment.</p>';
+          return;
+        }
+
+        const trendingArticle = allTrendingArticles[0];
+
+        const trendingArticleHtml = `
+          <div class="news-item trending-news-item" id="trending-news-0">
+            <div style="position: absolute; bottom: 15px; right: 15px; background: linear-gradient(135deg, #ff6b35, #d63031); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
+              🔥 Trending
+            </div>
+            <div class="news-header">
+              <h4>${trendingArticle.title}</h4>
+              <span class="news-source">${trendingArticle.source}</span>
+            </div>
+            <p>${trendingArticle.description}</p>
+            <div class="news-actions">
+              <button class="btn-analyze-news" onclick="analyzeNewsArticle(0, '${trendingArticle.title.replace(/'/g, "\\'")}', '${trendingArticle.description.replace(/'/g, "\\'")}')">
+                Analyse
+              </button>
+              <button class="btn-save-news" id="save-trending-0" style="display: none;" onclick="saveNewsAsAnalysis('${trendingArticle.title.replace(/'/g, "\\'")}', '${trendingArticle.description.replace(/'/g, "\\'")}')">
+                Save Analysis
+              </button>
+            </div>
+            <div class="analysis-result" id="analysis-trending-0" style="display: none;"></div>
+          </div>
+        `;
+
+        list.innerHTML = trendingArticleHtml;
+      } catch (error) {
+        console.error('Error loading trending news:', error);
+        list.innerHTML = '<p style="color: #e53935; text-align: center;">Error loading trending news.</p>';
+      }
+    }
+
+    async function searchNews() {
+      const query = document.getElementById('newsSearch').value.trim().toUpperCase();
+      if (!query) return alert('Please enter a ticker or company name');
+
+      const newsList = document.getElementById('newsList');
+      newsList.innerHTML = '<p style="color: #aaa; text-align: center;">Searching news...</p>';
+
+      try {
+        const response = await fetch(`/api/news/${query}`);
+        const articles = await response.json();
+        
+        if (!articles || articles.length === 0) {
+          newsList.innerHTML = '<p style="color: #aaa; text-align: center;">No news found.</p>';
+          return;
+        }
+
+        newsList.innerHTML = articles.slice(0, 5).map((article, index) => `
+          <div class="news-item" id="search-news-${index}">
+            <div class="news-header">
+              <h4>${article.title}</h4>
+              <span class="news-source">${article.source}</span>
+            </div>
+            <p>${article.description}</p>
+            <div class="news-actions">
+              <button class="btn-analyze-news" onclick="analyzeNewsArticle('search-${index}', '${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
+                Analyse
+              </button>
+              <button class="btn-save-news" id="save-search-${index}" style="display: none;" onclick="saveNewsAsAnalysis('${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
+                Save Analysis
+              </button>
+            </div>
+            <div class="analysis-result" id="analysis-search-${index}" style="display: none;"></div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error fetching news:', error);
+        newsList.innerHTML = '<p style="color: #e53935; text-align: center;">Error loading news. Please try again.</p>';
+      }
+    }
+
+    window.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter' && document.activeElement.id === 'newsSearch') {
+        searchNews();
+      }
+    });
+
+    async function analyzeNewsArticle(index, title, description) {
+      const analysisDiv = document.getElementById(`analysis-${index}`) ||
+                         document.getElementById(`analysis-trending-${index}`) ||
+                         document.getElementById(`analysis-latest-${index}`);
+      
+      if (!analysisDiv) return;
+      
+      analysisDiv.innerHTML = '<p style="color: #aaa; text-align: center; margin-top: 10px;">Analyzing sentiment...</p>';
+      analysisDiv.style.display = 'block';
+      
+      try {
+        const response = await fetch('/api/analyze-sentiment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: title + ' ' + description, title: title })
+        });
+
+        if (!response.ok) throw new Error('API error');
+        
+        const result = await response.json();
+        const sentiment = result.sentiment || 'NEUTRAL';
+        const scores = result.scores || { positive: 0, negative: 0, neutral: 100 };
+        const confidence = result.confidence || (Math.max(scores.positive || 0, scores.neutral || 0, scores.negative || 0));
+
+        let sentimentColor = '#999';
+        let sentimentBg = 'rgba(153, 153, 153, 0.1)';
+        if (sentiment === 'POSITIVE') {
+          sentimentColor = '#4caf50';
+          sentimentBg = 'rgba(76, 175, 80, 0.15)';
+        } else if (sentiment === 'NEGATIVE') {
+          sentimentColor = '#e53935';
+          sentimentBg = 'rgba(229, 57, 53, 0.15)';
+        }
+
+        const html = `
+          <div style="background-color: ${sentimentBg}; padding: 12px; border-radius: 6px; border-left: 4px solid ${sentimentColor};">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: ${sentimentColor}; font-size: 1.1rem;">Sentiment: ${sentiment}</strong>
+              <div style="background-color: rgba(0, 0, 0, 0.2); padding: 4px 10px; border-radius: 4px;">
+                <span style="color: #fff; font-weight: 600; font-size: 0.9rem;">Confidence: ${Math.round(confidence)}%</span>
+              </div>
+            </div>
+            <div style="margin-top: 8px; display: flex; gap: 15px;">
+              <div>
+                <span style="color: #4caf50; font-weight: 600;">Positive</span><br>
+                <span style="color: #4caf50; font-size: 1.3rem; font-weight: bold;">${Math.round(scores.positive || 0)}%</span>
+              </div>
+              <div>
+                <span style="color: #999; font-weight: 600;">Neutral</span><br>
+                <span style="color: #999; font-size: 1.3rem; font-weight: bold;">${Math.round(scores.neutral || 0)}%</span>
+              </div>
+              <div>
+                <span style="color: #e53935; font-weight: 600;">Negative</span><br>
+                <span style="color: #e53935; font-size: 1.3rem; font-weight: bold;">${Math.round(scores.negative || 0)}%</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        analysisDiv.innerHTML = html;
+
+        // Highlight the news item based on sentiment
+        const newsItem = document.getElementById(`search-news-${index}`) ||
+                        document.getElementById(`trending-news-${index}`) ||
+                        document.getElementById(`latest-news-${index}`);
+        if (newsItem) {
+          if (sentiment === 'POSITIVE') {
+            newsItem.style.borderLeft = '5px solid #4caf50';
+            newsItem.style.backgroundColor = 'rgba(76, 175, 80, 0.05)';
+          } else if (sentiment === 'NEGATIVE') {
+            newsItem.style.borderLeft = '5px solid #e53935';
+            newsItem.style.backgroundColor = 'rgba(229, 57, 53, 0.05)';
+          } else {
+            newsItem.style.borderLeft = '5px solid #999';
+            newsItem.style.backgroundColor = 'rgba(153, 153, 153, 0.05)';
+          }
+        }
+
+        // Show save button
+        const saveBtn = document.getElementById(`save-${index}`) ||
+                       document.getElementById(`save-trending-${index}`) ||
+                       document.getElementById(`save-latest-${index}`) || 
+                       document.getElementById(`save-btn-${index}`);
+        if (saveBtn) saveBtn.style.display = 'inline-block';
+
+      } catch (error) {
+        console.error('Error analyzing news:', error);
+        analysisDiv.innerHTML = '<p style="color: #e53935;">Error analyzing sentiment.</p>';
+      }
+    }
+
+    function saveNewsAsAnalysis(title, description) {
+      // Get existing analyses from localStorage
+      const analyses = JSON.parse(localStorage.getItem('analyses') || '[]');
+      
+      // Create new analysis object
+      const newAnalysis = {
+        id: Date.now(), // Use timestamp as unique ID
+        title: title,
+        content: description,
+        notes: '',
+        date: new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric'
+        }),
+        isFavorite: false
+      };
+      
+      // Add to analyses array
+      analyses.push(newAnalysis);
+      
+      // Save back to localStorage
+      localStorage.setItem('analyses', JSON.stringify(analyses));
+      
+      // Show success message
+      alert(`✅ Analysis saved! Check your "Saved Analysis" in the Account page to view all saved articles.`);
+    }
+
+    // Load news on page load
+    window.addEventListener('DOMContentLoaded', function() {
+      loadLatestNews();
+      loadTrendingNews();
+    });
   </script>
 
 </body>
