@@ -84,3 +84,15 @@ exports.analyzeText = (req, res) => {
         });
     });
 };
+
+// GET endpoint for market insights (returns sample insights for watchlist)
+exports.getMarketInsights = (req, res) => {
+    const insights = [
+        { symbol: 'AAPL', sentiment: 'bullish', confidence: 0.82, analysis: 'Strong uptrend with positive earnings outlook' },
+        { symbol: 'MSFT', sentiment: 'bullish', confidence: 0.78, analysis: 'AI integration driving growth prospects' },
+        { symbol: 'TSLA', sentiment: 'neutral', confidence: 0.65, analysis: 'Mixed signals from market analysts' },
+        { symbol: 'GOOGL', sentiment: 'bullish', confidence: 0.75, analysis: 'Cloud services expansion shows promise' },
+        { symbol: 'AMZN', sentiment: 'bullish', confidence: 0.80, analysis: 'Stable growth in AWS and retail segments' }
+    ];
+    res.json({ insights, success: true });
+};
