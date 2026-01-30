@@ -547,6 +547,57 @@ CREATE TABLE IF NOT EXISTS `stock_risk_classification` (
   `note` VARCHAR(255) DEFAULT NULL,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`symbol`)
+-- =========================================================
+-- ALERT RULES (price-based alerts)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `alert_rules` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `userId` INT NOT NULL,
+  `symbol` VARCHAR(16) NOT NULL,
+  `alertType` VARCHAR(50) NOT NULL,
+  `thresholdValue` DECIMAL(12,4) NOT NULL,
+  `isActive` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_alert_user` (`userId`),
+  KEY `idx_alert_symbol` (`symbol`),
+  CONSTRAINT `fk_alert_user` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- ALERT ACTIVITY LOG (triggered alerts history)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `alert_activity_log` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `alertId` INT NOT NULL,
+  `triggeredPrice` DECIMAL(12,4) NOT NULL,
+  `currentPrice` DECIMAL(12,4) DEFAULT NULL,
+  `triggered` TINYINT(1) NOT NULL DEFAULT 0,
+  `alertedAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_activity_alert` (`alertId`),
+  CONSTRAINT `fk_activity_alert` FOREIGN KEY (`alertId`) REFERENCES `alert_rules` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- ECONOMIC CALENDAR EVENTS (optional - for storing calendar data)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS `economic_calendar_events` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `event` VARCHAR(255) NOT NULL,
+  `country` VARCHAR(50) NOT NULL,
+  `eventDate` DATETIME NOT NULL,
+  `forecast` VARCHAR(255),
+  `previous` VARCHAR(255),
+  `actual` VARCHAR(255),
+  `impact` VARCHAR(50) NOT NULL,
+  `source` VARCHAR(100),
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_event_date` (`eventDate`),
+  KEY `idx_event_country` (`country`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Seed a few manual overrides (optional)
