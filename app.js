@@ -632,7 +632,7 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
       // Get existing holding if any
       const existingHolding = await new Promise((resolve, reject) => {
         db.query(
-          'SELECT qty, avgPrice FROM user_holdings WHERE userId = ? AND symbol = ?',
+          'SELECT qty, avgPrice FROM user_holdings WHERE userId = ? AND symbol = ? AND mode = "REAL"',
           [userId, symbol],
           (err, results) => {
             if (err) reject(err);
@@ -659,10 +659,10 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
           );
         });
       } else {
-        // Insert new holding
+        // Insert new holding with explicit REAL mode
         await new Promise((resolve, reject) => {
           db.query(
-            'INSERT INTO user_holdings (userId, symbol, qty, avgPrice) VALUES (?, ?, ?, ?)',
+            'INSERT INTO user_holdings (userId, symbol, qty, avgPrice, mode) VALUES (?, ?, ?, ?, "REAL")',
             [userId, symbol, quantity, price],
             (err) => {
               if (err) reject(err);
@@ -688,7 +688,7 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
       // Check if user owns this stock
       const holdingResult = await new Promise((resolve, reject) => {
         db.query(
-          'SELECT qty, avgPrice FROM user_holdings WHERE userId = ? AND symbol = ?',
+          'SELECT qty, avgPrice FROM user_holdings WHERE userId = ? AND symbol = ? AND mode = "REAL"',
           [userId, symbol],
           (err, results) => {
             if (err) reject(err);
@@ -742,7 +742,7 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
         // Remove holding if sold all shares
         await new Promise((resolve, reject) => {
           db.query(
-            'DELETE FROM user_holdings WHERE userId = ? AND symbol = ?',
+            'DELETE FROM user_holdings WHERE userId = ? AND symbol = ? AND mode = "REAL"',
             [userId, symbol],
             (err) => {
               if (err) reject(err);
@@ -754,7 +754,7 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
         // Update holding with remaining shares
         await new Promise((resolve, reject) => {
           db.query(
-            'UPDATE user_holdings SET qty = ? WHERE userId = ? AND symbol = ?',
+            'UPDATE user_holdings SET qty = ? WHERE userId = ? AND symbol = ? AND mode = "REAL"',
             [newQty, userId, symbol],
             (err) => {
               if (err) reject(err);

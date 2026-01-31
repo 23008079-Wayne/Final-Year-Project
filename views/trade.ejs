@@ -768,6 +768,23 @@
       
       const symbolInput = document.getElementById('symbol');
       
+      // ✅ NEW: Check URL parameters for auto-loading symbol from homepage
+      const urlParams = new URLSearchParams(window.location.search);
+      const symbolFromUrl = urlParams.get('symbol');
+      
+      if (symbolFromUrl) {
+        // Set the symbol input value
+        symbolInput.value = symbolFromUrl.toUpperCase();
+        
+        // Fetch the live price immediately
+        setTimeout(() => {
+          fetchLivePrice(symbolFromUrl.toUpperCase());
+        }, 100);
+        
+        // Clear the URL parameter to keep the URL clean
+        window.history.replaceState({}, document.title, '/trade');
+      }
+      
       // Fetch price when user finishes typing (with debounce)
       let priceTimeout;
       symbolInput.addEventListener('input', function() {
@@ -852,8 +869,8 @@
         const data = await response.json();
         console.log('[TRADE] Full API Response:', JSON.stringify(data, null, 2));
 
-        // Try multiple fields that might contain the price
-        let price = data.price || data.c || data.lastPrice || data.currentPrice || null;
+        // Extract price from nested quote object: data.quote.c
+        let price = data.quote?.c || data.price || data.c || data.lastPrice || data.currentPrice || null;
         
         console.log(`[TRADE] Extracted price value: ${price} (type: ${typeof price})`);
         

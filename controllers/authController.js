@@ -97,16 +97,27 @@ exports.register = async (req, res) => {
         [userId, riskTolerance, investmentExperience, annualIncome || null, investmentGoal, timeHorizon, age || null, netWorth || null]
       );
 
-    console.log("DEBUG: Creating user account...");
+    console.log("DEBUG: Creating user accounts...");
     const accountNumber = `ACC-${userId}-${Date.now()}`;
+    const paperAccountNumber = `PAPER-${userId}-${Date.now()}`;
+    
+    // Create Trading account
     await db
       .promise()
       .query(
         'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
         [userId, accountNumber, 'Trading', 'active', 0, 0, 0, 'USD']
       );
+    
+    // Create Paper account with $100,000 starting balance
+    await db
+      .promise()
+      .query(
+        'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
+        [userId, paperAccountNumber, 'paper', 'active', 100000, 0, 0, 'USD']
+      );
 
-    console.log("DEBUG: Registration complete, redirecting to login");
+    console.log("DEBUG: Accounts created (Trading + Paper), redirecting to login");
     req.flash('success', 'Registration successful. Please login.');
     res.redirect('/login');
 
@@ -183,13 +194,39 @@ exports.login = async (req, res) => {
       );
 
       if (existingAccount.length === 0) {
-        console.log("DEBUG: No account found, creating one...");
+        console.log("DEBUG: No accounts found, creating both Trading and Paper...");
         const accountNumber = `ACC-${user.userId}-${Date.now()}`;
+        const paperAccountNumber = `PAPER-${user.userId}-${Date.now()}`;
+        
+        // Create Trading account
         await db.promise().query(
           'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
           [user.userId, accountNumber, 'Trading', 'active', 0, 0, 0, 'USD']
         );
-        console.log("DEBUG: Account created successfully");
+        
+        // Create Paper account with $100,000 starting balance
+        await db.promise().query(
+          'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
+          [user.userId, paperAccountNumber, 'paper', 'active', 100000, 0, 0, 'USD']
+        );
+        
+        console.log("DEBUG: Both Trading and Paper accounts created successfully");
+      } else {
+        // Check if paper account exists
+        const [paperAccounts] = await db.promise().query(
+          'SELECT * FROM accounts WHERE userId = ? AND accountType = "paper"',
+          [user.userId]
+        );
+        
+        if (paperAccounts.length === 0) {
+          console.log("DEBUG: Paper account missing, creating one...");
+          const paperAccountNumber = `PAPER-${user.userId}-${Date.now()}`;
+          await db.promise().query(
+            'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
+            [user.userId, paperAccountNumber, 'paper', 'active', 100000, 0, 0, 'USD']
+          );
+          console.log("DEBUG: Paper account created successfully");
+        }
       }
     } catch (err) {
       console.error("DEBUG: Error checking/creating account:", err);

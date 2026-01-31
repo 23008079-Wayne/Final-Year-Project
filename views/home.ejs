@@ -1306,6 +1306,23 @@
     window.addEventListener('DOMContentLoaded', function() {
       loadLatestNews();
       loadTrendingNews();
+
+      // ✅ Add purchase button functionality
+      document.querySelectorAll('.purchase-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const symbol = this.dataset.symbol;
+          const price = this.dataset.price;
+          
+          if (!symbol) {
+            alert('Stock symbol not found');
+            return;
+          }
+
+          // Redirect to trade page with symbol parameter
+          // The trade page will load this symbol and fetch live price
+          window.location.href = `/trade?symbol=${encodeURIComponent(symbol)}`;
+        });
+      });
     });
   </script>
 </body>
