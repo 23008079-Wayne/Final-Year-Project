@@ -1,21 +1,22 @@
 /*
   quoteController.js
-
-  This file contains:
-  - A+B+fallback quote logic (Finnhub primary, Yahoo backup, cache fallback)
-  - Stooq historical daily series (for 30D performance)
-  - Simple risk estimate using volatility (free approach)
-  quote system (Finnhub + Yahoo + cache)
-  Stooq historical prices
-  DB read helpers (holdings + risk profile)
-  risk estimate + caching
+  --------------------------------------------------
+  Purpose:
+  - Provide stock quote data using A+B+Fallback strategy
+    A) Finnhub (primary)
+    B) Yahoo Finance (backup)
+    Fallback)
+  - Fetch historical prices from Stooq
 */
 
 "use strict";
 
 const yahooFinance = require("yahoo-finance2").default;
 
-/* Basic fetch helpers (Node 18+ has global fetch) */
+
+/**
+ * Fetch with timeout protection
+ */
 async function fetchWithTimeout(url, timeout = 8000) {
   if (typeof fetch !== "function") {
     throw new Error("Global fetch is not available. Use Node 18+ or install node-fetch.");
@@ -23,10 +24,15 @@ async function fetchWithTimeout(url, timeout = 8000) {
 
   return Promise.race([
     fetch(url, { headers: { Accept: "application/json" } }),
-    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), timeout))
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout")), timeout)
+    )
   ]);
 }
 
+/**
+ * Fetch JSON safely (status + content-type check)
+ */
 async function fetchJsonWithTimeout(url, timeout = 8000) {
   const res = await fetchWithTimeout(url, timeout);
 
@@ -44,7 +50,14 @@ async function fetchJsonWithTimeout(url, timeout = 8000) {
   return res.json();
 }
 
-/* Stooq historical daily close series */
+/* ==================================================
+   HISTORICAL PRICE DATA (STOOQ)
+   ================================================== */
+
+/**
+ * Fetch daily closing prices from Stooq
+ * Used for charts and risk estimation
+ */
 async function fetchStooqDailySeries(symbol, days = 60) {
   const stooqSymbol = `${String(symbol).toLowerCase()}.us`;
   const url = `https://stooq.com/q/d/l/?s=${stooqSymbol}&i=d`;
@@ -55,13 +68,12 @@ async function fetchStooqDailySeries(symbol, days = 60) {
   const lines = csvText.trim().split("\n");
   if (lines.length <= 1) return { labels: [], prices: [] };
 
-  const rows = lines.slice(1);
-  const last = rows.slice(-days);
+  const rows = lines.slice(1).slice(-days);
 
   const labels = [];
   const prices = [];
 
-  for (const row of last) {
+  for (const row of rows) {
     const parts = row.split(",");
     const date = parts[0];
     const close = Number(parts[4]);
@@ -74,93 +86,140 @@ async function fetchStooqDailySeries(symbol, days = 60) {
   return { labels, prices };
 }
 
-/* Quote cache */
-const QUOTE_TTL_MS = 15 * 1000;
+/* ==================================================
+   QUOTE CACHE + PROVIDERS
+   ================================================== */
+
+const QUOTE_TTL_MS = 15 * 1000; // 15 seconds
 const quoteBySymbol = new Map();
 
+// Finnhub cooldown handling
 let finnhubBlockedUntil = 0;
 const FINNHUB_COOLDOWN_MS = 60 * 1000;
 
+/**
+ * Yahoo Finance fallback quote
+ */
 async function fetchYahooQuote(symbol) {
   const sym = String(symbol).toUpperCase();
 
   const data = await Promise.race([
     yahooFinance.quote(sym),
-    new Promise((_, reject) => setTimeout(() => reject(new Error("Yahoo timeout")), 5000))
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Yahoo timeout")), 5000)
+    )
   ]);
 
-  const c = Number(data?.regularMarketPrice);
-  const d = Number(data?.regularMarketChange);
-  const dp = Number(data?.regularMarketChangePercent);
-
   return {
-    c: Number.isFinite(c) ? c : null,
-    d: Number.isFinite(d) ? d : null,
-    dp: Number.isFinite(dp) ? dp : null
+    c: Number.isFinite(data?.regularMarketPrice) ? data.regularMarketPrice : null,
+    d: Number.isFinite(data?.regularMarketChange) ? data.regularMarketChange : null,
+    dp: Number.isFinite(data?.regularMarketChangePercent) ? data.regularMarketChangePercent : null
   };
 }
 
+/**
+ * Finnhub primary quote
+ */
 async function fetchFinnhubQuote(symbol) {
   const apiKey = process.env.FINNHUB_API_KEY;
   const sym = String(symbol).toUpperCase();
+
+  if (!apiKey) throw new Error("Missing FINNHUB_API_KEY");
+
   const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${apiKey}`;
   return fetchJsonWithTimeout(url, 8000);
 }
 
+/**
+ * A+B+Fallback quote logic with caching
+ */
 async function getQuoteABCached(symbol) {
   const sym = String(symbol || "").toUpperCase();
   const now = Date.now();
 
-  const hit = quoteBySymbol.get(sym);
-  if (hit && now - hit.ts < QUOTE_TTL_MS) {
-    return { quote: hit.data, stale: false, source: hit.source };
+  const cached = quoteBySymbol.get(sym);
+  if (cached && now - cached.ts < QUOTE_TTL_MS) {
+    return { quote: cached.data, stale: false, source: cached.source };
   }
 
   const store = (data, source, stale = false) => {
-    const c = Number(data?.c);
-    if (Number.isFinite(c)) {
+    if (Number.isFinite(Number(data?.c))) {
       quoteBySymbol.set(sym, { ts: now, data, source });
     }
     return { quote: data, stale, source };
   };
 
-  const inCooldown = now < finnhubBlockedUntil;
-
-  if (!inCooldown) {
+  // Try Finnhub (unless in cooldown)
+  if (now >= finnhubBlockedUntil) {
     try {
       const q = await fetchFinnhubQuote(sym);
-      const c = Number(q?.c);
-      if (Number.isFinite(c)) return store(q, "finnhub", false);
+      if (Number.isFinite(Number(q?.c))) return store(q, "finnhub");
     } catch (err) {
-      const msg = String(err?.message || "");
-      if (msg.includes("HTTP 429")) finnhubBlockedUntil = now + FINNHUB_COOLDOWN_MS;
+      if (String(err?.message).includes("HTTP 429")) {
+        finnhubBlockedUntil = now + FINNHUB_COOLDOWN_MS;
+      }
     }
   }
 
+  // Try Yahoo Finance
   try {
     const y = await fetchYahooQuote(sym);
-    const c = Number(y?.c);
-    if (Number.isFinite(c)) return store(y, "yahoo", false);
+    if (Number.isFinite(Number(y?.c))) return store(y, "yahoo");
   } catch {
     // ignore
   }
 
-  if (hit?.data) return { quote: hit.data, stale: true, source: "cache" };
-  return { quote: { c: null, d: null, dp: null }, stale: true, source: "cache" };
+  // Fallback to cached data
+  if (cached?.data) return { quote: cached.data, stale: true, source: "cache" };
+
+  return {
+    quote: { c: null, d: null, dp: null },
+    stale: true,
+    source: "cache"
+  };
 }
 
-/* Risk estimate (free) using volatility from Stooq */
+/* ==================================================
+   EXPRESS ROUTE HANDLER
+   ================================================== */
+
+/**
+ * GET /api/quote/:symbol
+ * Public endpoint for live quote retrieval
+ */
+async function getQuote(req, res) {
+  try {
+    const symbol = String(req.params.symbol || "").toUpperCase().trim();
+    if (!symbol) {
+      return res.status(400).json({ error: "Missing stock symbol" });
+    }
+
+    const { quote, stale, source } = await getQuoteABCached(symbol);
+
+    res.json({ symbol, quote, stale, source });
+  } catch (error) {
+    console.error("getQuote error:", error?.message || error);
+    res.status(500).json({ error: "Failed to fetch quote" });
+  }
+}
+
+/* ==================================================
+   RISK ESTIMATION (VOLATILITY-BASED)
+   ================================================== */
+
 function stdDev(nums) {
-  const n = nums.length;
-  if (n < 2) return 0;
-  const mean = nums.reduce((a, b) => a + b, 0) / n;
-  const varr = nums.reduce((a, x) => a + (x - mean) ** 2, 0) / (n - 1);
-  return Math.sqrt(varr);
+  if (nums.length < 2) return 0;
+  const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const variance = nums.reduce((a, x) => a + (x - mean) ** 2, 0) / (nums.length - 1);
+  return Math.sqrt(variance);
 }
 
-const riskCache = new Map(); // symbol -> { ts, level }
+const riskCache = new Map();
 const RISK_TTL_MS = 10 * 60 * 1000;
 
+/**
+ * Estimate stock risk level using historical volatility
+ */
 async function estimateStockRiskLevel(symbol) {
   const sym = String(symbol || "").toUpperCase();
   const now = Date.now();
@@ -170,42 +229,34 @@ async function estimateStockRiskLevel(symbol) {
 
   try {
     const { prices } = await fetchStooqDailySeries(sym, 60);
-    if (!prices || prices.length < 10) {
-      riskCache.set(sym, { ts: now, level: null });
-      return null;
-    }
+    if (!prices || prices.length < 10) return null;
 
-    const rets = [];
+    const returns = [];
     for (let i = 1; i < prices.length; i++) {
-      const prev = Number(prices[i - 1]);
-      const cur = Number(prices[i]);
-      if (Number.isFinite(prev) && prev > 0 && Number.isFinite(cur)) {
-        rets.push((cur - prev) / prev);
-      }
-    }
-    if (rets.length < 10) {
-      riskCache.set(sym, { ts: now, level: null });
-      return null;
+      returns.push((prices[i] - prices[i - 1]) / prices[i - 1]);
     }
 
-    const vol = stdDev(rets);
-    let level = "HIGH";
-    if (vol < 0.015) level = "LOW";
-    else if (vol < 0.03) level = "MEDIUM";
+    const vol = stdDev(returns);
+    const level = vol < 0.015 ? "LOW" : vol < 0.03 ? "MEDIUM" : "HIGH";
 
     riskCache.set(sym, { ts: now, level });
     return level;
   } catch {
-    riskCache.set(sym, { ts: now, level: null });
     return null;
   }
 }
 
-/* Export */
+/* ==================================================
+   MODULE EXPORTS
+   ================================================== */
+
 module.exports = {
   QUOTE_TTL_MS,
   getQuoteABCached,
+  getQuote,                    // ✅ Express route handler
   fetchStooqDailySeries,
   estimateStockRiskLevel,
-  finnhubState: () => ({ blockedUntil: finnhubBlockedUntil })
+  finnhubState: () => ({
+    blockedUntil: finnhubBlockedUntil
+  })
 };

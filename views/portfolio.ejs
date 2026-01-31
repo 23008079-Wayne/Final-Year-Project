@@ -5,15 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title><%= typeof title !== "undefined" ? title : "Marketmind" %></title>
-
-  <!-- Global CSS (keeps your navbar the same as other pages) -->
   <link rel="stylesheet" href="/css/styles.css" />
-
-  <!-- Portfolio-only CSS (scoped; won’t touch navbar) -->
   <link rel="stylesheet" href="/css/portfolio.css" />
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .p-btn{ padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#111; color:#eee; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+    .p-btn.primary{ background:#00eaff; color:#000; border-color:transparent; font-weight:800; }
+    .risk-bad{ color:#ffcc00; font-weight:800; }
+  </style>
 </head>
+
 <%- include('partials/head') %>
 
 <body class="portfolio-page">
@@ -21,8 +24,6 @@
 
   <%
     const totalValue = Number((portfolio && portfolio.totalValue) ?? 0);
-    const dailyChange = Number((portfolio && portfolio.dailyChange) ?? 0);
-    const dailyPercent = Number((portfolio && portfolio.dailyPercent) ?? 0);
     const holdings = (portfolio && Array.isArray(portfolio.holdings)) ? portfolio.holdings : [];
   %>
 
@@ -48,14 +49,16 @@
                 $<%= totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
               </div>
 
+              <!-- ✅ Option A: Unrealised P/L since purchase (JS will fill it) -->
               <div id="liveChange" class="change-row">
-                <span class="<%= dailyChange >= 0 ? 'pos' : 'neg' %>">
-                  <%= dailyChange >= 0 ? "+" : "-" %>$<%= Math.abs(dailyChange).toFixed(2) %>
-                  (<%= dailyPercent >= 0 ? "+" : "-" %><%= Math.abs(dailyPercent).toFixed(2) %>%)
-                </span>
+                <span class="muted">—</span>
               </div>
 
-              <div class="subtext">Updates hourly</div>
+              <div class="subtext">Unrealised P/L since purchase (updates with live prices)</div>
+
+              <div style="margin-top:14px;">
+                <a href="/paper-trading" class="p-btn primary">Go to Paper Trading →</a>
+              </div>
             </div>
 
             <div class="meta-right">
@@ -77,17 +80,18 @@
                 <tr>
                   <th>Symbol</th>
                   <th>Qty</th>
-                  <th>Avg Price</th>
+                  <th>Cost Price</th>
                   <th>Live Price</th>
                   <th>Market Value</th>
                   <th>P/L</th>
+                  <th>Risk</th>
                 </tr>
               </thead>
 
               <tbody>
                 <% if (holdings.length === 0) { %>
                   <tr>
-                    <td colspan="6" class="subtext">No holdings yet.</td>
+                    <td colspan="7" class="subtext">No holdings yet. Use Paper Trading to create positions.</td>
                   </tr>
                 <% } else { %>
                   <% holdings.forEach(item => {
@@ -102,6 +106,7 @@
                       <td class="livePrice muted">—</td>
                       <td class="marketValue muted">—</td>
                       <td class="pl muted">—</td>
+                      <td class="risk muted">—</td>
                     </tr>
                   <% }) %>
                 <% } %>
@@ -141,6 +146,7 @@
   <script>
     const liveValueText = document.getElementById("liveValue");
     const liveStatusPill = document.getElementById("liveStatusPill");
+    const liveChangeEl = document.getElementById("liveChange");
 
     const sectorCtx = document.getElementById("sectorChart").getContext("2d");
     const trendCtx = document.getElementById("trendChart").getContext("2d");
@@ -162,17 +168,13 @@
       return "$" + x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function pad2(n) {
-      return String(n).padStart(2, "0");
-    }
+    function pad2(n) { return String(n).padStart(2, "0"); }
 
     function currentHourKey(d = new Date()) {
-      // Key like "2026-01-28 14"
       return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}`;
     }
 
     function currentHourLabel(d = new Date()) {
-      // Label like "Today 14:00"
       return `Today ${pad2(d.getHours())}:00`;
     }
 
@@ -183,9 +185,7 @@
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
-        plugins: {
-          legend: { labels: { color: "rgba(255,255,255,0.75)" } }
-        }
+        plugins: { legend: { labels: { color: "rgba(255,255,255,0.75)" } } }
       }
     });
 
@@ -200,9 +200,7 @@
           x: { ticks: { color: "rgba(255,255,255,0.65)" }, grid: { color: "rgba(255,255,255,0.08)" } },
           y: { ticks: { color: "rgba(255,255,255,0.65)" }, grid: { color: "rgba(255,255,255,0.08)" } }
         },
-        plugins: {
-          legend: { labels: { color: "rgba(255,255,255,0.75)" } }
-        }
+        plugins: { legend: { labels: { color: "rgba(255,255,255,0.75)" } } }
       }
     });
 
@@ -224,6 +222,7 @@
         const liveCell = row.querySelector(".livePrice");
         const mvCell = row.querySelector(".marketValue");
         const plCell = row.querySelector(".pl");
+        const riskCell = row.querySelector(".risk");
 
         if (Number.isFinite(livePrice)) {
           liveCell.classList.remove("muted");
@@ -253,10 +252,54 @@
           plCell.classList.remove("pl-pos", "pl-neg");
           plCell.textContent = "—";
         }
+
+        const stockRisk = info.stockRisk || null;
+        const warn = !!info.riskWarning;
+
+        if (stockRisk) {
+          riskCell.classList.remove("muted");
+          riskCell.classList.toggle("risk-bad", warn);
+          riskCell.textContent = warn ? `⚠️ ${stockRisk}` : stockRisk;
+        } else {
+          riskCell.classList.add("muted");
+          riskCell.classList.remove("risk-bad");
+          riskCell.textContent = "—";
+        }
       });
     }
 
-    // Prevent duplicate points within the same hour
+    // unrealised P/L (since purchase)
+    function updateSincePurchaseChange(allocation) {
+      if (!Array.isArray(allocation) || allocation.length === 0) {
+        liveChangeEl.innerHTML = `<span class="muted">—</span>`;
+        return;
+      }
+
+      let invested = 0;
+      let marketValue = 0;
+
+      for (const a of allocation) {
+        const qty = Number(a.qty || 0);
+        const avg = Number(a.avg || 0);
+        const price = Number(a.price || 0);
+
+        invested += qty * avg;
+        marketValue += qty * price;
+      }
+
+      const diff = marketValue - invested;
+      const pct = invested > 0 ? (diff / invested) * 100 : 0;
+
+      const sign = diff >= 0 ? "+" : "-";
+      const cls = diff >= 0 ? "pos" : "neg";
+
+      liveChangeEl.innerHTML = `
+        <span class="${cls}">
+          ${sign}${formatMoney(Math.abs(diff))} (${sign}${Math.abs(pct).toFixed(2)}%)
+        </span>
+      `;
+    }
+
     let lastHourKeyAdded = null;
 
     function appendHourlyPoint(liveTotal) {
@@ -265,14 +308,11 @@
       const label = currentHourLabel(now);
 
       if (lastHourKeyAdded === key) return;
-
       lastHourKeyAdded = key;
 
       trendChart.data.labels.push(label);
       trendChart.data.datasets[0].data.push(Number(liveTotal || 0));
 
-      // Keep chart from growing forever (30 daily + up to ~24 hourly = still fine)
-      // Just in case, cap at 80 points.
       if (trendChart.data.labels.length > 80) {
         trendChart.data.labels.shift();
         trendChart.data.datasets[0].data.shift();
@@ -295,16 +335,19 @@
         liveValueText.textContent = formatMoney(liveTotal);
 
         if (Array.isArray(data.allocation)) {
+          // ✅ Option A uses allocation to compute since-purchase P/L
+          updateSincePurchaseChange(data.allocation);
+
           sectorChart.data.labels = data.allocation.map(a => String(a.symbol || "").toUpperCase());
           sectorChart.data.datasets = [{ data: data.allocation.map(a => Number(a.value || 0)) }];
           sectorChart.update();
 
           updateHoldingsTable(data.allocation);
+        } else {
+          updateSincePurchaseChange([]);
         }
 
-        if (addHourlyPoint) {
-          appendHourlyPoint(liveTotal);
-        }
+        if (addHourlyPoint) appendHourlyPoint(liveTotal);
       } catch {
         setStatus(false);
       }
@@ -318,7 +361,6 @@
         const data = await res.json();
         if (!data || !Array.isArray(data.labels) || !Array.isArray(data.values)) return;
 
-        // Seed daily history first
         trendChart.data.labels = data.labels.slice();
         trendChart.data.datasets[0].data = data.values.slice();
         trendChart.update();
@@ -333,36 +375,15 @@
       return Math.max(1000, next - now);
     }
 
-    // init
     setStatus(false);
-
-    async function cleanupInvalidHoldings() {
-      try {
-        const res = await fetch('/api/cleanup-invalid-holdings', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          alert('Invalid holdings cleaned up. Refreshing portfolio...');
-          location.reload();
-        } else {
-          alert('Error: ' + data.error);
-        }
-      } catch (error) {
-        console.error('Cleanup error:', error);
-        alert('Error cleaning up holdings');
-      }
-    }
 
     (async function initPortfolio() {
       await loadPortfolioHistory30D();
 
-      // Do one live fetch now (updates value/table/pie), and also add the first hourly point for today
       await fetchLivePortfolioAndUpdateUI(true);
 
-      // Then schedule hourly updates exactly on the next hour boundary
       setTimeout(() => {
         fetchLivePortfolioAndUpdateUI(true);
-
-        // every hour after that
         setInterval(() => fetchLivePortfolioAndUpdateUI(true), 60 * 60 * 1000);
       }, msUntilNextHour());
     })();

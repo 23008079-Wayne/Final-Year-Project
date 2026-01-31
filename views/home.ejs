@@ -1,94 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <title>Market Dashboard</title>
   <%- include('partials/head') %>
 
-  <!-- =========================================================
-       Chart.js
-       - Used only for visualisation (mini trend sparkline).
-       - MAS note: This does NOT execute trades or give advice.
-       ========================================================= -->
+  <!-- Chart.js for sparklines -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root{
-      --nav-height: 64px;
+      --bg:#070707;
+      --panel:rgba(18,18,18,.85);
+      --panel2:rgba(255,255,255,.04);
+      --border:rgba(255,255,255,.10);
+      --soft:rgba(255,255,255,.06);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.60);
+      --accent:#00eaff;
+      --pos:#34d399;
+      --neg:#f87171;
+      --radius:16px;
       --ticker-height: 44px;
     }
 
     body{
       margin:0;
-      background:#0b0b0b;
-      color:#eee;
+      background:
+        radial-gradient(1100px 700px at 10% 0%, rgba(0,234,255,.14), transparent 55%),
+        radial-gradient(900px 600px at 90% 10%, rgba(0,234,255,.08), transparent 55%),
+        var(--bg);
+      color:var(--text);
       font-family:"Inter", Arial, sans-serif;
     }
 
-    .nav{
-      height: var(--nav-height);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:0 28px;
-      background:rgba(15,15,15,0.95);
-      border-bottom:1px solid #222;
-      position:sticky;
-      top:0;
-      z-index:20;
-      backdrop-filter: blur(6px);
-    }
-
-    .brand{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      font-weight:700;
-      letter-spacing:0.5px;
-      font-size:18px;
-      color:#00eaff;
-    }
-
-    .nav-links{
-      display:flex;
-      gap:16px;
-      align-items:center;
-    }
-
-    .nav-links a{
-      color:#ddd;
-      text-decoration:none;
-      font-size:14px;
-      padding:8px 12px;
-      border-radius:8px;
-      border:1px solid transparent;
-      transition:0.2s;
-    }
-
-    .nav-links a:hover{
-      border:1px solid #2a2a2a;
-      background:#121212;
-    }
-
-    .cta{
-      background:#00eaff;
-      color:#000 !important;
-      font-weight:700;
-    }
-
+    /* ================== TICKER ================== */
     .ticker-wrap{
       position: sticky;
       top: 0;
-      z-index:15;
-
+      z-index: 15;
       height: var(--ticker-height);
       display:flex;
       align-items:center;
-
-      background:#0f0f0f;
-      border-bottom:1px solid #222;
+      background: rgba(10,10,10,.88);
+      border-bottom:1px solid var(--border);
       overflow:hidden;
       white-space:nowrap;
-      box-shadow: 0 10px 18px rgba(0,0,0,0.25);
+      backdrop-filter: blur(8px);
     }
 
     .ticker{
@@ -100,9 +57,7 @@
       animation: ticker-scroll 22s linear infinite;
     }
 
-    .ticker-wrap:hover .ticker{
-      animation-play-state: paused;
-    }
+    .ticker-wrap:hover .ticker{ animation-play-state: paused; }
 
     @keyframes ticker-scroll{
       from{ transform: translateX(0); }
@@ -114,399 +69,533 @@
       align-items:baseline;
       gap:10px;
       padding-right:18px;
-      border-right:1px solid rgba(255,255,255,0.08);
-      min-width: 190px;
+      border-right:1px solid var(--soft);
+      min-width: 210px;
     }
+    .ticker-sym{ font-weight:1000; letter-spacing:.2px; }
+    .ticker-price{ font-weight:1000; }
+    .ticker-chg{ font-weight:900; font-size:12px; }
+    .t-up{ color:var(--pos); }
+    .t-down{ color:var(--neg); }
 
-    .ticker-sym{ font-weight:800; color:#eaeaea; font-size:14px; }
-    .ticker-price{ font-weight:800; color:#fff; font-size:14px; }
-    .ticker-chg{ font-weight:700; font-size:12px; }
-    .t-up{ color:#4caf50; }
-    .t-down{ color:#e53935; }
-
-    .hero{
-      padding:32px 28px 16px;
+    /* ================== PAGE LAYOUT ================== */
+    .container{
       max-width:1200px;
-      margin:auto;
+      margin:0 auto;
+      padding:18px 28px 24px;
     }
 
-    .hero h1{
-      margin:0 0 10px;
-      font-size:32px;
-      letter-spacing:0.2px;
+    /* ✅ NEW: MARKET STATUS BAR (broker style) */
+    .market-bar{
+      margin-top:10px;
+      margin-bottom:8px;
+      padding:12px 14px;
+      background: rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius: 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .market-left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color: rgba(255,255,255,.75);
+      font-size:13px;
+      flex-wrap:wrap;
+    }
+    .market-right{
+      font-size:12px;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+    .status-dot{
+      width:9px;
+      height:9px;
+      border-radius:50%;
+      display:inline-block;
+    }
+    .status-dot.open{ background: var(--pos); box-shadow: 0 0 10px rgba(52,211,153,.45); }
+    .status-dot.closed{ background: var(--neg); box-shadow: 0 0 10px rgba(248,113,113,.35); }
+    .market-title{
+      font-weight:1000;
+      color: rgba(255,255,255,.92);
+    }
+    .market-pill{
+      font-size:11px;
+      padding:5px 9px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25);
+      color: rgba(255,255,255,.70);
     }
 
-    .hero p{
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .headline h1{
+      margin:0 0 6px;
+      font-size:28px;
+      font-weight:1000;
+      letter-spacing:.2px;
+    }
+    .headline p{
       margin:0;
-      color:#bdbdbd;
-      max-width:820px;
-      line-height:1.5;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+      max-width:760px;
+    }
+
+    .searchbox{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      background: var(--panel2);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:10px 12px;
+      min-width:360px;
+    }
+
+    .searchbox input{
+      flex:1;
+      background:transparent;
+      border:none;
+      outline:none;
+      color:var(--text);
       font-size:14px;
     }
 
-    .mas-box{
-      margin:18px 0 10px;
-      background:#101010;
-      border:1px solid #222;
-      border-radius:14px;
-      padding:16px 16px;
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      cursor:pointer;
+      font-weight:900;
+      font-size:13px;
+      text-decoration:none;
+      transition:.15s;
+      white-space:nowrap;
+    }
+    .btn:hover{ transform:translateY(-1px); background:rgba(255,255,255,.06); }
+    .btn.primary{
+      background:var(--accent);
+      color:#000;
+      border-color:transparent;
+    }
+    .btn.ghost{
+      background:transparent;
+    }
+    .btn.small{ padding:8px 10px; font-size:12px; border-radius:10px; }
+
+    /* ================== KPI ROW ================== */
+    .kpis{
       display:grid;
-      gap:10px;
+      grid-template-columns:repeat(4,1fr);
+      gap:12px;
+      margin-top:16px;
+    }
+    .kpi{
+      background: var(--panel2);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      padding:12px 14px;
+    }
+    .kpi .label{ font-size:12px; color:var(--muted); }
+    .kpi .value{ font-size:18px; font-weight:1000; margin-top:6px; }
+    .kpi .sub{ font-size:12px; color:rgba(255,255,255,.5); margin-top:2px; }
+
+    .pos{ color:var(--pos); }
+    .neg{ color:var(--neg); }
+
+    /* ================== GRID ================== */
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr 2fr;
+      gap:16px;
+      margin-top:16px;
+      align-items:start;
     }
 
-    .mas-title{
+    .panel{
+      background: var(--panel);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      overflow:hidden;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+
+    .panel-header{
+      padding:12px 14px;
+      border-bottom:1px solid var(--border);
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:12px;
     }
-
-    .pill{
-      font-size:12px;
-      color:#bbb;
-      border:1px solid #2a2a2a;
-      padding:6px 10px;
-      border-radius:999px;
-      background:#0f0f0f;
-    }
-
-    details summary{
-      cursor:pointer;
-      list-style:none;
-    }
-    details summary::-webkit-details-marker{ display:none; }
-
-    .mas-small{
-      color:#bdbdbd;
-      font-size:13px;
-      line-height:1.5;
-    }
-
-    .grid{
-      max-width:1200px;
-      margin:14px auto 28px;
-      padding:0 28px 28px;
-      display:grid;
-      grid-template-columns: 1.2fr 2fr;
-      gap:18px;
-    }
-
-    .panel{
-      background:#121212;
-      border:1px solid #222;
-      border-radius:16px;
-      box-shadow:0 0 18px rgba(255,255,255,0.04);
-      overflow:hidden;
-    }
-
-    .panel-header{
-      padding:14px 16px;
-      border-bottom:1px solid #222;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-
     .panel-header h2{
       margin:0;
-      font-size:14px;
-      letter-spacing:0.3px;
-      color:#eaeaea;
+      font-size:12px;
+      font-weight:1000;
+      letter-spacing:.45px;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.85);
     }
-
     .panel-header span{
       font-size:12px;
-      color:#999;
+      color:var(--muted);
     }
 
-    /*  Cards grid stays 2 columns, but 6 cards per page will show as 3 rows nicely */
-    .cards{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(240px, 1fr));
-      gap:14px;
-      padding:14px;
-    }
-
-    .card{
-      background:#161616;
-      border:1px solid #222;
-      border-radius:14px;
-      padding:14px;
-      transition:0.2s;
-      min-height: 230px;
-    }
-
-    .card:hover{
-      transform:translateY(-2px);
-      box-shadow:0 0 24px rgba(0, 234, 255, 0.08);
-      border-color:#2a2a2a;
-    }
-
-    .row{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:10px;
-    }
-
-    .sym{
-      font-size:16px;
-      font-weight:700;
-      margin:0;
-      color:#00eaff;
-      text-decoration:none;
-    }
-
-    .meta{
-      color:#aaa;
-      font-size:12px;
-      margin-top:2px;
-      margin-bottom: 6px;
-    }
-
-    .price{
-      font-size:18px;
-      font-weight:700;
-      margin:0;
-    }
-
-    .chg{
-      font-size:12px;
-      margin-top:4px;
-      font-weight:600;
-    }
-
-    .pos{ color:#4caf50; }
-    .neg{ color:#e53935; }
-
-    .actions{
-      display:flex;
-      gap:10px;
-      margin-top:10px;
-    }
-
-    .btn{
-      display:inline-block;
-      text-decoration:none;
-      font-size:12px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid #2a2a2a;
-      color:#ddd;
-      background:#111;
-      transition:0.2s;
-    }
-
-    .btn:hover{ background:#151515; }
-    .purchase-btn{
-      border:1px solid #00eaff;
-    }
-    .purchase-btn:hover{
-      background:#0f1a1c;
-    }
-
-
-    .spark-wrap{
-      height: 110px;
-      margin-top: 6px;
-    }
-    .spark-wrap canvas{
-      width: 100% !important;
-      height: 100% !important;
-      display:block;
-    }
-
-    .block{
+    .left-block{
       padding:14px;
       display:grid;
       gap:10px;
     }
 
     .section{
-      background:#101010;
-      border:1px solid #222;
-      border-radius:14px;
+      background: rgba(255,255,255,.03);
+      border:1px solid var(--soft);
+      border-radius: 14px;
       padding:12px;
     }
-
     .section-title{
-      font-size:12px;
-      letter-spacing:0.35px;
-      color:#cfcfcf;
-      margin:0 0 8px;
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:10px;
-    }
-
-    .muted{
-      color:#9a9a9a;
+      margin:0 0 8px;
       font-size:12px;
-      line-height:1.45;
+      letter-spacing:.35px;
+      color:rgba(255,255,255,.75);
+      font-weight:900;
+    }
+    .tag{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:rgba(255,255,255,.65);
+      background: rgba(0,0,0,.25);
+      white-space:nowrap;
+    }
+    .muted{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.55;
     }
 
     .kv{
       display:grid;
       gap:8px;
     }
-
     .kv-row{
       display:flex;
       justify-content:space-between;
-      gap:10px;
+      gap:12px;
       font-size:12px;
-      color:#cfcfcf;
-      padding:6px 0;
-      border-bottom:1px solid rgba(255,255,255,0.06);
+      color:rgba(255,255,255,.78);
+      padding:7px 0;
+      border-bottom:1px solid rgba(255,255,255,.06);
     }
     .kv-row:last-child{ border-bottom:none; }
 
-    .tag{
+    /* ================== STOCK TABLE ================== */
+    .stocks-table{
+      width:100%;
+      border-collapse:collapse;
+    }
+    .stocks-table th{
+      text-align:left;
       font-size:11px;
-      padding:4px 8px;
-      border-radius:999px;
-      border:1px solid #2a2a2a;
-      color:#bdbdbd;
-      background:#0f0f0f;
+      color:rgba(255,255,255,.58);
+      padding:10px 14px;
+      border-bottom:1px solid var(--border);
+      white-space:nowrap;
+    }
+    .stocks-table td{
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:middle;
+    }
+    .stocks-table tr:hover{
+      background: rgba(0,234,255,.05);
+    }
+
+    .sym{
+      color:var(--accent);
+      font-weight:1000;
+      text-decoration:none;
+      letter-spacing:.2px;
+    }
+
+    .price{
+      font-weight:1000;
+      letter-spacing:.1px;
       white-space:nowrap;
     }
 
-    .footer{
-      border-top:1px solid #222;
-      padding:16px 28px;
-      color:#999;
+    .chg{
+      font-weight:1000;
       font-size:12px;
-      background:#0f0f0f;
+      white-space:nowrap;
     }
 
-    /* News Item Styling */
+    .mini{
+      width:160px;
+      height:48px;
+      border-radius:12px;
+      background: rgba(255,255,255,.02);
+      border:1px solid rgba(255,255,255,.06);
+      overflow:hidden;
+    }
+    .mini canvas{
+      width:100% !important;
+      height:100% !important;
+      display:block;
+    }
+
+    .row-actions{
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    .purchase-btn{
+      border-color: rgba(0,234,255,.55);
+    }
+    .purchase-btn:hover{
+      background: rgba(0,234,255,.10);
+    }
+
+    .table-footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 14px;
+      border-top:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    /* ================== MAS BOX ================== */
+    details summary{
+      cursor:pointer;
+      list-style:none;
+      user-select:none;
+    }
+    details summary::-webkit-details-marker{ display:none; }
+    .pill-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+    .pill{
+      font-size:11px;
+      color:rgba(255,255,255,.72);
+      border:1px solid var(--border);
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(0,0,0,.20);
+    }
+
+    /* ================== NEWS ================== */
+    .news-wrap{
+      max-width:1200px;
+      margin: 14px auto 0;
+      padding: 0 28px 28px;
+    }
+    .news-panel{
+      background: var(--panel);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      overflow:hidden;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    .news-inner{
+      padding: 18px 18px 22px;
+    }
+    .news-title-row{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:16px;
+      flex-wrap:wrap;
+    }
+    .news-title-row h2{
+      margin:0;
+      color:var(--accent);
+      font-size:22px;
+      font-weight:1000;
+    }
+    .news-title-row span{
+      color: var(--muted);
+      font-size:13px;
+    }
+
     .news-item {
-      background: #161616;
-      padding: 24px;
-      margin-bottom: 20px;
-      border-radius: 12px;
-      border-left: 5px solid #00eaff;
+      background: rgba(255,255,255,.03);
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-left: 5px solid var(--accent);
       position: relative;
       transition: 0.2s;
     }
-
     .news-item:hover {
-      border-color: #00eaff;
-      box-shadow: 0 0 24px rgba(0, 234, 255, 0.15);
+      box-shadow: 0 0 24px rgba(0, 234, 255, 0.12);
+      border-color: rgba(0,234,255,.25);
     }
-
     .news-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 15px;
-      margin-bottom: 14px;
+      gap: 12px;
+      margin-bottom: 10px;
     }
-
     .news-item h4 {
       margin: 0;
-      color: #00eaff;
-      font-size: 18px;
-      flex: 1;
-      font-weight: 600;
+      color: rgba(255,255,255,.92);
+      font-size: 16px;
+      font-weight: 900;
       line-height: 1.4;
+      flex: 1;
     }
-
     .news-source {
-      color: #aaa;
-      font-size: 0.95rem;
+      color: rgba(255,255,255,.72);
+      font-size: 12px;
       white-space: nowrap;
-      padding: 5px 12px;
-      background: rgba(0, 234, 255, 0.1);
-      border-radius: 6px;
+      padding: 6px 10px;
+      background: rgba(0, 234, 255, 0.10);
+      border: 1px solid rgba(0, 234, 255, 0.20);
+      border-radius: 999px;
     }
-
     .news-item p {
-      margin: 0 0 14px 0;
-      color: #bdbdbd;
-      font-size: 1rem;
-      line-height: 1.6;
+      margin: 0 0 12px 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
     }
-
     .news-actions {
       display: flex;
-      gap: 12px;
-      margin-top: 14px;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap:wrap;
     }
 
     .btn-analyze-news {
-      display: inline-block;
-      padding: 10px 20px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
-      border: none;
-      border-radius: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.9);
+      border-radius: 12px;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 1rem;
+      font-weight: 900;
+      font-size: 13px;
       transition: 0.2s;
     }
-
     .btn-analyze-news:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(0,0,0,.25);
+      border-color: rgba(255,255,255,.18);
     }
 
     .btn-save-news {
-      display: inline-block;
-      padding: 10px 20px;
-      background: #00eaff;
-      color: #000;
-      border: none;
-      border-radius: 8px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color:#000;
+      border:none;
+      border-radius: 12px;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 1rem;
+      font-weight: 1000;
+      font-size: 13px;
       transition: 0.2s;
     }
-
     .btn-save-news:hover {
-      background: #00d4e8;
-      transform: translateY(-2px);
+      opacity: .92;
+      transform: translateY(-1px);
     }
 
     .analysis-result {
-      margin-top: 14px;
-      padding: 16px;
+      margin-top: 12px;
+      padding: 12px;
       background: rgba(0, 234, 255, 0.05);
-      border-radius: 10px;
-      border: 1px solid rgba(0, 234, 255, 0.2);
-      font-size: 0.95rem;
-      color: #aaa;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 234, 255, 0.18);
+      font-size: 12px;
+      color: rgba(255,255,255,.72);
       line-height: 1.5;
     }
 
     .trending-news-item {
       border-left: 5px solid #ff6b35;
-      box-shadow: 0 0 24px rgba(255, 107, 53, 0.15);
+      box-shadow: 0 0 24px rgba(255, 107, 53, 0.12);
+    }
+
+    .footer{
+      border-top:1px solid var(--border);
+      padding:16px 28px;
+      color:var(--muted);
+      font-size:12px;
+      background: rgba(0,0,0,.35);
+    }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns:1fr; }
+      .kpis{ grid-template-columns:repeat(2,1fr); }
+      .searchbox{ min-width: 0; width:100%; }
+      .mini{ width:140px; }
     }
   </style>
 </head>
 
 <body>
-
   <%- include('partials/navbar') %>
 
+  <!-- TICKER -->
   <div class="ticker-wrap" aria-label="Live market ticker">
     <div id="ticker" class="ticker"></div>
   </div>
 
-  <div class="hero">
-    <h1>Overview</h1>
-    <p>
-      A data-visualisation dashboard designed to help users understand market movements.
-      It provides charts and summaries for learning and monitoring — it does not automate trades or provide financial advice.
-    </p>
+  <div class="container">
 
-    <div class="mas-box" id="mas">
-      <div class="mas-title">
-        <div style="display:flex; gap:10px; align-items:center;">
+    <!-- Market Status Bar -->
+    <div class="market-bar">
+      <div class="market-left">
+        <span id="mktDot" class="status-dot closed"></span>
+        <span class="market-title" id="mktStatus">Market: Checking…</span>
+        <span class="market-pill">Quotes: Finnhub</span>
+        <span class="market-pill">Charts: Finnhub / Stooq</span>
+        <span class="market-pill">Mode: View-only</span>
+      </div>
+      <div class="market-right">
+        Last updated: <span id="marketTime">—</span>
+      </div>
+    </div>
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="headline">
+        <h1>Market Overview</h1>
+
+        <div class="pill-row">
           <span class="pill">Transparency</span>
           <span class="pill">Explainability</span>
           <span class="pill">Human-in-the-loop</span>
@@ -514,397 +603,348 @@
         </div>
       </div>
 
-      <details>
-        <summary class="mas-small">
-          View disclosures: data sources, limitations, and user responsibility (click to expand)
-        </summary>
-
-        <div class="mas-small" style="margin-top:10px;">
-          <strong>Disclaimer:</strong> StockAI is for informational/educational purposes only and does not provide financial advice.<br><br>
-
-          <strong>Regulatory Note:</strong> This is a student prototype for learning. It is not a licensed trading platform and does not provide regulated financial services.<br><br>
-
-          <strong>Data Sources:</strong> Live quotes via Finnhub; historical daily trend via Finnhub (if available) or Stooq (fallback); full charts via TradingView widgets.<br><br>
-
-          <strong>How it works (Explainability):</strong> The mini chart shows historical closing prices. The “live” behaviour updates the latest chart point using the latest quote so users can monitor changes in near real-time.<br><br>
-
-          <strong>Limitations:</strong> Data may be delayed, incomplete, or impacted by free-tier API limits / provider restrictions. Some tickers may return limited history or missing data.<br><br>
-
-          <strong>No Automated Actions:</strong> StockAI does not execute trades or automate buying/selling. Users remain responsible for any decisions made using this dashboard.<br><br>
-
-          <strong>Fair Use:</strong> Past performance shown on charts does not guarantee future results. Consult licensed professionals for investment advice.
-        </div>
-      </details>
-    </div>
-  </div>
-
-  <div class="grid">
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Market Tools & Context</h2>
-        <span>View-only</span>
-      </div>
-
-      <div class="block">
-        <div class="section">
-          <div class="section-title">
-            <span>Navigation</span>
-            <span class="tag">No trade execution</span>
-          </div>
-
-          <div style="display:grid; gap:10px;">
-            <a class="btn" href="/portfolio" style="text-align:center;">📊 Open Portfolio Dashboard</a>
-            <a class="btn" href="/chart/AAPL" style="text-align:center;">📈 Open AAPL Full Chart</a>
-            <a class="btn" href="/chart/TSLA" style="text-align:center;">📉 Open TSLA Full Chart</a>
-
-            <div class="muted" style="margin-top:2px;">
-              <strong>Tip:</strong> Click any ticker card to open the full TradingView chart page.
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">
-            <span>Market Snapshot (Current Page)</span>
-            <span class="tag" id="lastUpdated">Updating…</span>
-          </div>
-
-          <%
-            const items = Array.isArray(results) ? results : [];
-            const ups = items.filter(x => Number(x?.quote?.dp) > 0).length;
-            const downs = items.filter(x => Number(x?.quote?.dp) < 0).length;
-
-            const sortedByDp = items
-              .map(x => ({ symbol: x.symbol, dp: Number(x?.quote?.dp) }))
-              .filter(x => Number.isFinite(x.dp))
-              .sort((a,b) => b.dp - a.dp);
-
-            const topGainer = sortedByDp.length ? sortedByDp[0] : null;
-            const topLoser  = sortedByDp.length ? sortedByDp[sortedByDp.length - 1] : null;
-          %>
-
-          <div class="kv">
-            <div class="kv-row">
-              <span>Advancers / Decliners</span>
-              <span><%= ups %> / <%= downs %></span>
-            </div>
-            <div class="kv-row">
-              <span>Top gainer (this page)</span>
-              <span><%= topGainer ? `${topGainer.symbol} (${topGainer.dp.toFixed(2)}%)` : "N/A" %></span>
-            </div>
-            <div class="kv-row">
-              <span>Top loser (this page)</span>
-              <span><%= topLoser ? `${topLoser.symbol} (${topLoser.dp.toFixed(2)}%)` : "N/A" %></span>
-            </div>
-
-            <!--  show both refresh values -->
-            <div class="kv-row">
-              <span>Card refresh</span>
-              <span><span id="refreshMs">—</span> ms</span>
-            </div>
-            <div class="kv-row">
-              <span>Ticker refresh</span>
-              <span><span id="tickerRefreshMs">—</span> ms</span>
-            </div>
-          </div>
-
-          <div class="muted" style="margin-top:8px;">
-            Snapshot reflects the tickers shown on this page only (not the entire market).
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">
-            <span>How to Interpret</span>
-            <span class="tag">Explainability</span>
-          </div>
-
-          <div class="muted">
-            • Prices come from public data providers (may be delayed).<br>
-            • Mini charts show historical closes (trend only).<br>
-            • Latest point refreshes using the latest quote (near real-time monitoring).<br>
-            • Charts are descriptive — not recommendations.
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">
-            <span>Data Integrity & Limitations</span>
-            <span class="tag">Transparency</span>
-          </div>
-
-          <div class="muted">
-            • Free-tier APIs can rate-limit (missing/slow updates).<br>
-            • Some tickers may have incomplete historical series.<br>
-            • Past performance does not guarantee future results.<br><br>
-            Users remain responsible for any decisions.
-          </div>
-        </div>
+      <!-- keep your search button -->
+      <div class="searchbox">
+        🔎
+        <input id="quickSearch" placeholder="Search ticker (AAPL) and press Go" />
+        <button class="btn primary" id="quickGo">Go</button>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Stocks</h2>
-        <span>Page <%= page %> of <%= totalPages %></span>
+    <!-- KPI ROW -->
+    <%
+      const items = Array.isArray(results) ? results : [];
+      const ups = items.filter(x => Number(x?.quote?.dp) > 0).length;
+      const downs = items.filter(x => Number(x?.quote?.dp) < 0).length;
+
+      const sortedByDp = items
+        .map(x => ({ symbol: x.symbol, dp: Number(x?.quote?.dp) }))
+        .filter(x => Number.isFinite(x.dp))
+        .sort((a,b) => b.dp - a.dp);
+
+      const topGainer = sortedByDp.length ? sortedByDp[0] : null;
+      const topLoser  = sortedByDp.length ? sortedByDp[sortedByDp.length - 1] : null;
+    %>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Advancers</div>
+        <div class="value pos"><%= ups %></div>
+        <div class="sub">Symbols up on this page</div>
       </div>
+      <div class="kpi">
+        <div class="label">Decliners</div>
+        <div class="value neg"><%= downs %></div>
+        <div class="sub">Symbols down on this page</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Top Gainer</div>
+        <div class="value"><%= topGainer ? topGainer.symbol : "—" %></div>
+        <div class="sub"><%= topGainer ? `${topGainer.dp.toFixed(2)}%` : "" %></div>
+      </div>
+      <div class="kpi">
+        <div class="label">Top Loser</div>
+        <div class="value"><%= topLoser ? topLoser.symbol : "—" %></div>
+        <div class="sub"><%= topLoser ? `${topLoser.dp.toFixed(2)}%` : "" %></div>
+      </div>
+    </div>
 
-      <div class="cards">
-        <% results.forEach(item => {  
-          const change = item.quote?.d ?? 0;
-          const percent = item.quote?.dp ?? 0;
-          const price = item.quote?.c ?? 0;
-          const cls = change > 0 ? "pos" : (change < 0 ? "neg" : "");
-        %>
+    <!-- MAIN GRID -->
+    <div class="grid">
+      <!-- LEFT PANEL -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Market Tools & Context</h2>
+          <span>View-only</span>
+        </div>
 
-          <div class="card">
-            <div class="row">
-              <div>
-                <a class="sym" href="/chart/<%= item.symbol %>"><%= item.symbol %></a>
-                <div class="meta">Live quote + historical trend (sparkline)</div>
+        <div class="left-block">
+          <div class="section">
+            <div class="section-title">
+              <span>Navigation</span>
+              <span class="tag">No trade execution</span>
+            </div>
+            <div style="display:grid; gap:10px;">
+              <a class="btn" href="/portfolio" style="text-align:center;">📊 Open Portfolio Dashboard</a>
+              <% if (topGainer) { %>
+                <a class="btn ghost" href="/chart/<%= topGainer.symbol %>" style="text-align:center;">
+                  🚀 Top Gainer: <strong><%= topGainer.symbol %></strong> (<%= topGainer.dp.toFixed(2) %>%)
+                </a>
+              <% } %>
+
+              <% if (topLoser) { %>
+                <a class="btn ghost" href="/chart/<%= topLoser.symbol %>" style="text-align:center;">
+                  📉 Top Loser: <strong><%= topLoser.symbol %></strong> (<%= topLoser.dp.toFixed(2) %>%)
+                </a>
+              <% } %>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">
+              <span>Market Snapshot (This Page)</span>
+              <span class="tag" id="lastUpdated">Updating…</span>
+            </div>
+
+            <div class="kv">
+              <div class="kv-row">
+                <span>Advancers / Decliners</span>
+                <span><%= ups %> / <%= downs %></span>
               </div>
+              <div class="kv-row">
+                <span>Top gainer (this page)</span>
+                <span><%= topGainer ? `${topGainer.symbol} (${topGainer.dp.toFixed(2)}%)` : "N/A" %></span>
+              </div>
+              <div class="kv-row">
+                <span>Top loser (this page)</span>
+                <span><%= topLoser ? `${topLoser.symbol} (${topLoser.dp.toFixed(2)}%)` : "N/A" %></span>
+              </div>
+              <div class="kv-row">
+                <span>Card refresh</span>
+                <span><span id="refreshMs">—</span> ms</span>
+              </div>
+              <div class="kv-row">
+                <span>Ticker refresh</span>
+                <span><span id="tickerRefreshMs">—</span> ms</span>
+              </div>
+            </div>
 
-              <div style="text-align:right;">
-                <p class="price" id="price-<%= item.symbol %>">$<%= Number(price).toFixed(2) %></p>
+            <div class="muted" style="margin-top:10px;">
+              Snapshot reflects tickers shown on this page only (not the entire market).
+            </div>
+          </div>
 
-                <div class="chg <%= cls %>" id="chg-<%= item.symbol %>">
+          
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: STOCK TABLE WITH GRAPHS -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Stocks</h2>
+          <span>Page <%= page %> of <%= totalPages %></span>
+        </div>
+
+        <table class="stocks-table">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Trend</th>
+              <th>Price</th>
+              <th>Change</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% results.forEach(item => {
+              const change = item.quote?.d ?? 0;
+              const percent = item.quote?.dp ?? 0;
+              const price = item.quote?.c ?? 0;
+              const cls = change > 0 ? "pos" : (change < 0 ? "neg" : "");
+            %>
+              <tr>
+                <td>
+                  <a class="sym" href="/chart/<%= item.symbol %>"><%= item.symbol %></a>
+                  <div class="muted" style="margin-top:4px;">Live quote + sparkline</div>
+                </td>
+
+                <td>
+                  <div class="mini">
+                    <canvas id="chart-<%= item.symbol %>"></canvas>
+                  </div>
+                </td>
+
+                <td class="price" id="price-<%= item.symbol %>">$<%= Number(price).toFixed(2) %></td>
+
+                <td class="chg <%= cls %>" id="chg-<%= item.symbol %>">
                   <%= change > 0 ? "+" : "" %><%= Number(change).toFixed(2) %>
                   (<%= percent > 0 ? "+" : "" %><%= Number(percent).toFixed(2) %>%)
-                </div>
-              </div>
-            </div>
+                </td>
 
-            <div class="spark-wrap">
-              <canvas id="chart-<%= item.symbol %>"></canvas>
-            </div>
+                <td style="text-align:right;">
+                  <div class="row-actions">
+                    <a class="btn small" href="/chart/<%= item.symbol %>">Full Chart</a>
+                    <button class="btn small purchase-btn" type="button"
+                            data-symbol="<%= item.symbol %>"
+                            data-price="<%= Number(price).toFixed(2) %>">
+                      Purchase
+                    </button>
+                  </div>
+                </td>
+              </tr>
 
-            <div class="actions">
-              <a class="btn" href="/chart/<%= item.symbol %>">Full Chart</a>
-              <!--  MAS note: Purchase is a simulated UI action (no real trade execution) -->
-              <button class="btn purchase-btn"
-                      type="button"
-                      data-symbol="<%= item.symbol %>"
-                      data-price="<%= Number(price).toFixed(2) %>">
-                Purchase
-              </button>
-            </div>
-            <script>
-              // =========================================================
-              // PURCHASE (SIMULATED) ACTION
-              // MAS: No trade execution, human-in-the-loop confirmation
-              // =========================================================
-              document.addEventListener("click", (e) => {
-                const btn = e.target.closest(".purchase-btn");
-                if(!btn) return;
+              <script>
+                (function(){
+                  const symbol = "<%= item.symbol %>";
+                  const REFRESH_MS = 15000;
 
-                const symbol = btn.dataset.symbol || "—";
-                const price  = btn.dataset.price || "—";
+                  const canvas = document.getElementById("chart-<%= item.symbol %>");
+                  if(!canvas) return;
 
-                alert(
-                  `Purchase Request (Simulation)\n\n` +
-                  `Stock: ${symbol}\n` +
-                  `Shown Price: $${price}\n\n` +
-                  `This is a student prototype.\nNo real trade is executed.`
-                );
-              });
-            </script>
+                  const ctx = canvas.getContext("2d");
+                  const labelsRaw = <%- JSON.stringify(item.graph.labels) %>;
+                  const pricesRaw = <%- JSON.stringify(item.graph.prices) %>;
 
+                  const prices = (pricesRaw || []).map(v => Number(v)).filter(v => Number.isFinite(v));
+                  const seed = Number("<%= Number(item.quote?.c ?? 0).toFixed(2) %>") || 0;
 
-            <script>
-              (function(){
-                const symbol = "<%= item.symbol %>";
+                  const initialData = prices.length ? prices : [seed, seed, seed];
+                  const initialLabels = (labelsRaw && labelsRaw.length) ? labelsRaw : ["1","2","3"];
 
-                //  CARD refresh interval (slow down here)
-                // 5s is pretty aggressive on free tier. Try 15s.
-                const REFRESH_MS = 15000;
+                  const gradient = ctx.createLinearGradient(0, 0, 0, 60);
+                  gradient.addColorStop(0, "rgba(0, 234, 255, 0.35)");
+                  gradient.addColorStop(1, "rgba(0, 234, 255, 0.00)");
 
-                const el = document.getElementById("chart-<%= item.symbol %>");
-                if(!el) return;
-
-                const ctx = el.getContext("2d");
-                const labelsRaw = <%- JSON.stringify(item.graph.labels) %>;
-                const pricesRaw = <%- JSON.stringify(item.graph.prices) %>;
-
-                const prices = (pricesRaw || [])
-                  .map(v => Number(v))
-                  .filter(v => Number.isFinite(v));
-
-                const seed = Number("<%= Number(item.quote?.c ?? 0).toFixed(2) %>") || 0;
-                const initialData = prices.length ? prices : [seed, seed, seed];
-                const initialLabels = (labelsRaw && labelsRaw.length) ? labelsRaw : ["1","2","3"];
-
-                const gradient = ctx.createLinearGradient(0, 0, 0, 120);
-                gradient.addColorStop(0, "rgba(0, 234, 255, 0.85)");
-                gradient.addColorStop(1, "rgba(0, 234, 255, 0.06)");
-
-                const chart = new Chart(ctx, {
-                  type: "line",
-                  data: {
-                    labels: initialLabels,
-                    datasets: [{
-                      data: initialData,
-                      borderColor: "#00eaff",
-                      backgroundColor: gradient,
-                      borderWidth: 2,
-                      tension: 0.35,
-                      pointRadius: 0,
-                      fill: true
-                    }]
-                  },
-                  options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    scales: { x: { display: false }, y: { display: false } }
-                  }
-                });
-
-                async function refreshLive(){
-                  try{
-                    const r = await fetch(`/api/quote/${encodeURIComponent(symbol)}`);
-                    if(!r.ok) return;
-                    const q = await r.json();
-                    if(!q || q.error) return;
-
-                    const livePrice = Number(q.c);
-                    const liveChange = Number(q.d);
-                    const livePercent = Number(q.dp);
-
-                    if(!Number.isFinite(livePrice)) return;
-
-                    const ds = chart.data.datasets[0].data;
-                    ds[ds.length - 1] = livePrice;
-                    chart.update();
-
-                    const priceEl = document.getElementById(`price-${symbol}`);
-                    if(priceEl) priceEl.innerText = `$${livePrice.toFixed(2)}`;
-
-                    const chgEl = document.getElementById(`chg-${symbol}`);
-                    if(chgEl && Number.isFinite(liveChange) && Number.isFinite(livePercent)){
-                      const cls = liveChange > 0 ? "pos" : (liveChange < 0 ? "neg" : "");
-                      chgEl.classList.remove("pos","neg");
-                      if(cls) chgEl.classList.add(cls);
-
-                      const signChg = liveChange > 0 ? "+" : "";
-                      const signPct = livePercent > 0 ? "+" : "";
-                      chgEl.innerText = `${signChg}${liveChange.toFixed(2)} (${signPct}${livePercent.toFixed(2)}%)`;
+                  const chart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                      labels: initialLabels,
+                      datasets: [{
+                        data: initialData,
+                        borderColor: "#00eaff",
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        tension: 0.35,
+                        pointRadius: 0,
+                        fill: true
+                      }]
+                    },
+                    options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      animation: false,
+                      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                      scales: { x: { display: false }, y: { display: false } }
                     }
-                  }catch(e){}
-                }
+                  });
 
-                setInterval(refreshLive, REFRESH_MS);
+                  async function refreshLive(){
+                    try{
+                      const r = await fetch(`/api/quote/${encodeURIComponent(symbol)}`);
+                      if(!r.ok) return;
 
-                //  show card refresh interval in left panel (only needs to run once)
-                const refreshEl = document.getElementById("refreshMs");
-                if(refreshEl && refreshEl.innerText === "—") refreshEl.innerText = String(REFRESH_MS);
-              })();
-            </script>
+                      const q = await r.json().catch(()=>null);
+                      if(!q || q.error) return;
+
+                      const live = q.quote ? q.quote : q;
+
+                      const livePrice = Number(live.c);
+                      const liveChange = Number(live.d);
+                      const livePercent = Number(live.dp);
+
+                      if(!Number.isFinite(livePrice)) return;
+
+                      const ds = chart.data.datasets[0].data;
+                      ds[ds.length - 1] = livePrice;
+                      chart.update();
+
+                      const priceEl = document.getElementById(`price-${symbol}`);
+                      if(priceEl) priceEl.innerText = `$${livePrice.toFixed(2)}`;
+
+                      const chgEl = document.getElementById(`chg-${symbol}`);
+                      if(chgEl && Number.isFinite(liveChange) && Number.isFinite(livePercent)){
+                        const cls = liveChange > 0 ? "pos" : (liveChange < 0 ? "neg" : "");
+                        chgEl.classList.remove("pos","neg");
+                        if(cls) chgEl.classList.add(cls);
+
+                        const signChg = liveChange > 0 ? "+" : "";
+                        const signPct = livePercent > 0 ? "+" : "";
+                        chgEl.innerText = `${signChg}${liveChange.toFixed(2)} (${signPct}${livePercent.toFixed(2)}%)`;
+                      }
+                    }catch(e){}
+                  }
+
+                  setInterval(refreshLive, REFRESH_MS);
+
+                  const refreshEl = document.getElementById("refreshMs");
+                  if(refreshEl && refreshEl.innerText === "—") refreshEl.innerText = String(REFRESH_MS);
+                })();
+              </script>
+            <% }) %>
+          </tbody>
+        </table>
+
+        <div class="table-footer">
+          <div style="font-size:12px; color:rgba(255,255,255,.55);">
+            Showing page <%= page %> of <%= totalPages %>
           </div>
-        <% }) %>
-      </div>
 
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        padding:12px 14px;
-        border-top:1px solid #222;
-        background:#121212;
-      ">
-        <div style="font-size:12px; color:#888;">
-          Showing page <%= page %> of <%= totalPages %>
-        </div>
-
-        <div style="display:flex; gap:8px;">
-          <% if (page > 1) { %>
-            <a class="btn" href="/?page=<%= page - 1 %>">⬅ Previous</a>
-          <% } %>
-
-          <% if (page < totalPages) { %>
-            <a class="btn" href="/?page=<%= page + 1 %>">Next ➡</a>
-          <% } %>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <% if (page > 1) { %>
+              <a class="btn small" href="/?page=<%= page - 1 %>">⬅ Previous</a>
+            <% } %>
+            <% if (page < totalPages) { %>
+              <a class="btn small" href="/?page=<%= page + 1 %>">Next ➡</a>
+            <% } %>
+          </div>
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- News & Sentiment Section - Full Width -->
-  <div style="background: #121212; border-top: 1px solid #222; border-bottom: 1px solid #222; margin-top: 40px; width:1200px; margin-left: auto; margin-right: auto;">
-    <div style="max-width: 1200px; margin: 0 auto; padding: 40px 28px;">
-      <!-- Latest News Section -->
-      <div style="margin-bottom: 40px;">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
-          <h2 style="margin: 0; color: #00eaff; font-size: 28px;">📰 Latest News</h2>
-          <span style="font-size: 1rem; color: #aaa;">Top stories</span>
-        </div>
-        <div id="latestNewsList" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-          <p style="color: #aaa; text-align: center;">Loading latest news...</p>
-        </div>
-      </div>
+  <!-- NEWS SECTION (kept) -->
+  <div class="news-wrap">
+    <div class="news-panel">
+      <div class="news-inner">
 
-      <!-- Divider -->
-      <div style="border-top: 1px solid #222; margin: 40px 0;"></div>
+        <!-- Latest News -->
+        <div style="margin-bottom:22px;">
+          <div class="news-title-row">
+            <h2>📰 Latest News</h2>
+            <span>Top stories</span>
+          </div>
+          <div id="latestNewsList" style="display:flex; flex-direction:column; gap:12px;">
+            <p style="color: rgba(255,255,255,.55); text-align:center;">Loading latest news...</p>
+          </div>
+        </div>
 
-      <!-- Trending News Section -->
-      <div style="margin-bottom: 40px;">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
-          <h2 style="margin: 0; color: #00eaff; font-size: 28px;">🔥 Trending News</h2>
-          <span style="font-size: 1rem; color: #aaa;">Most talked about</span>
-        </div>
-        <div id="trendingNewsList" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-          <p style="color: #aaa; text-align: center;">Loading trending news...</p>
-        </div>
-      </div>
+        <div style="border-top:1px solid rgba(255,255,255,.08); margin:20px 0;"></div>
 
-      <!-- Divider -->
-      <div style="border-top: 1px solid #222; margin: 40px 0;"></div>
+        <!-- Trending News -->
+        <div style="margin-bottom:22px;">
+          <div class="news-title-row">
+            <h2>🔥 Trending News</h2>
+            <span>Most talked about</span>
+          </div>
+          <div id="trendingNewsList" style="display:flex; flex-direction:column; gap:12px;">
+            <p style="color: rgba(255,255,255,.55); text-align:center;">Loading trending news...</p>
+          </div>
+        </div>
 
-      <!-- Search Section -->
-      <div>
-        <h2 style="color: #00eaff; margin: 0 0 30px 0; font-size: 28px;">🔍 Search News</h2>
-        <div style="display: flex; gap: 12px; margin-bottom: 25px;">
-          <input 
-            type="text" 
-            id="newsSearch" 
-            placeholder="Search by ticker (AAPL) or company name (Apple)..." 
-            style="
-              flex: 1;
-              padding: 14px 18px;
-              background: #0f0f0f;
-              border: 1px solid #2a2a2a;
-              border-radius: 10px;
-              color: #eee;
-              font-family: 'Inter', Arial, sans-serif;
-              font-size: 16px;
-            "
-          />
-          <button 
-            onclick="searchNews()" 
-            style="
-              padding: 14px 32px;
-              background: #00eaff;
-              color: #000;
-              border: none;
-              border-radius: 10px;
-              font-weight: 700;
-              cursor: pointer;
-              font-size: 16px;
-              transition: 0.2s;
-            "
-            onmouseover="this.style.opacity='0.9'"
-            onmouseout="this.style.opacity='1'"
-          >
-            🔍 Search
-          </button>
+        <div style="border-top:1px solid rgba(255,255,255,.08); margin:20px 0;"></div>
+
+        <!-- Search News -->
+        <div>
+          <div class="news-title-row">
+            <h2>🔍 Search News</h2>
+            <span>By ticker or company</span>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+            <input type="text" id="newsSearch"
+              placeholder="Search by ticker (AAPL) or company name (Apple)..."
+              style="
+                flex:1; min-width:260px;
+                padding:12px 14px;
+                background: rgba(255,255,255,.03);
+                border: 1px solid rgba(255,255,255,.10);
+                border-radius: 12px;
+                color: rgba(255,255,255,.9);
+                font-family: 'Inter', Arial, sans-serif;
+                font-size: 14px;
+                outline:none;
+              "
+            />
+            <button class="btn primary" onclick="searchNews()">🔍 Search</button>
+          </div>
+
+          <div id="newsHint" style="color: rgba(255,255,255,.55); margin-bottom: 12px; font-size: 13px;">
+            💡 Search for ANY stock ticker or company name (AAPL, MSFT, XYZ, etc.)
+          </div>
+
+          <div id="newsList" style="display:flex; flex-direction:column; gap:12px;"></div>
         </div>
-        <div id="newsHint" style="color: #aaa; margin-bottom: 20px; font-size: 1rem;">
-          💡 Search for ANY stock ticker or company name (AAPL, MSFT, XYZ, etc.) - Unlimited search!
-        </div>
-        <div id="newsList" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
-          <!-- Search results will be added here -->
-        </div>
+
       </div>
     </div>
   </div>
@@ -915,32 +955,84 @@
   </div>
 
   <script>
+    // Quick ticker search (keeps your button behavior)
+    (function(){
+      const input = document.getElementById("quickSearch");
+      const btn = document.getElementById("quickGo");
+      if(!input || !btn) return;
+
+      function go(){
+        const q = String(input.value||"").trim().toUpperCase();
+        if(!q) return;
+        location.href = "/chart/" + encodeURIComponent(q);
+      }
+
+      btn.addEventListener("click", go);
+      input.addEventListener("keydown", (e)=>{ if(e.key==="Enter") go(); });
+    })();
+  </script>
+
+  
+  <script>
+    //  Last updated (left panel)
     (function(){
       const el = document.getElementById("lastUpdated");
       if(!el) return;
-
       const update = () => {
         const now = new Date();
         el.textContent = `Updated ${now.toLocaleTimeString()}`;
       };
-
       update();
       setInterval(update, 1000);
     })();
   </script>
 
   <script>
-    // =========================================================
-    //  TICKER (slow down here)
-    // - Uses ONE endpoint: /api/ticker
-    // - Change REFRESH_MS to slow ticker refresh
-    // =========================================================
+    //  NEW: Market status + clock (US market hours, NY time)
+    (function(){
+      const dot = document.getElementById("mktDot");
+      const txt = document.getElementById("mktStatus");
+      const time = document.getElementById("marketTime");
+      if(!dot || !txt || !time) return;
+
+      function isUSOpen(){
+        const parts = new Intl.DateTimeFormat("en-US",{
+          timeZone:"America/New_York",
+          weekday:"short",
+          hour:"2-digit",
+          minute:"2-digit",
+          hour12:false
+        }).formatToParts(new Date());
+
+        const get = (t)=>parts.find(x=>x.type===t)?.value;
+        const day = get("weekday");
+        const h = Number(get("hour"));
+        const m = Number(get("minute"));
+        if(!["Mon","Tue","Wed","Thu","Fri"].includes(day)) return false;
+
+        const mins = h*60+m;
+        // 9:30am - 4:00pm ET
+        return mins >= (9*60+30) && mins < (16*60);
+      }
+
+      function tick(){
+        const open = isUSOpen();
+        dot.className = "status-dot " + (open ? "open" : "closed");
+        txt.textContent = "US Market: " + (open ? "Open" : "Closed");
+        time.textContent = new Date().toLocaleTimeString();
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
+
+  <script>
+    //  TICKER (kept)
     (function(){
       const tickerEl = document.getElementById("ticker");
       if(!tickerEl) return;
 
-      //  TICKER refresh interval (slow down here)
-      // Try 20s to reduce "Unavailable"
       const REFRESH_MS = 20000;
 
       function renderItem(item){
@@ -999,10 +1091,8 @@
           const html = rows.map(renderItem).join("");
           tickerEl.innerHTML = html + html;
 
-          //  show ticker refresh interval in left panel
           const tEl = document.getElementById("tickerRefreshMs");
           if(tEl) tEl.innerText = String(REFRESH_MS);
-
         } catch(e){
           tickerEl.innerHTML = `
             <div class="ticker-item">
@@ -1017,9 +1107,12 @@
       loadTicker();
       setInterval(loadTicker, REFRESH_MS);
     })();
+  </script>
 
+  <script>
     // =========================================================
-    // NEWS & SENTIMENT FUNCTIONS
+    // NEWS & SENTIMENT (kept)
+    // ✅ FIXED analyzeNewsArticle() to be stable + simple
     // =========================================================
     async function loadLatestNews() {
       const list = document.getElementById('latestNewsList');
@@ -1031,43 +1124,30 @@
           try {
             const response = await fetch(`/api/news/${ticker}`);
             const articles = await response.json();
-            if (articles && articles.length > 0) {
-              allArticles.push(...articles);
-            }
-          } catch (e) {
-            console.warn(`Error fetching news for ${ticker}`);
-          }
+            if (articles && articles.length > 0) allArticles.push(...articles);
+          } catch (e) {}
         }
 
         if (allArticles.length === 0) {
-          list.innerHTML = '<p style="color: #aaa; text-align: center;">No news available at the moment.</p>';
+          list.innerHTML = '<p style="color: rgba(255,255,255,.55); text-align: center;">No news available at the moment.</p>';
           return;
         }
 
-        const newsHtml = allArticles
-          .slice(0, 5)
-          .map((article, index) => `
-            <div class="news-item" id="latest-news-${index}">
-              <div class="news-header">
-                <h4>${article.title}</h4>
-                <span class="news-source">${article.source}</span>
-              </div>
-              <p>${article.description}</p>
-              <div class="news-actions">
-                <button class="btn-analyze-news" onclick="analyzeNewsArticle(${index}, '${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
-                  Analyse
-                </button>
-                <button class="btn-save-news" id="save-latest-${index}" style="display: none;" onclick="saveNewsAsAnalysis('${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
-                  Save Analysis
-                </button>
-              </div>
-              <div class="analysis-result" id="analysis-latest-${index}" style="display: none;"></div>
+        list.innerHTML = allArticles.slice(0, 5).map((article, index) => `
+          <div class="news-item" id="latest-news-${index}">
+            <div class="news-header">
+              <h4>${article.title}</h4>
+              <span class="news-source">${article.source}</span>
             </div>
-          `).join('');
-
-        list.innerHTML = newsHtml;
+            <p>${article.description}</p>
+            <div class="news-actions">
+              <button class="btn-analyze-news" onclick="analyzeNewsArticle('latest-${index}', '${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">Analyse</button>
+              <button class="btn-save-news" id="save-latest-${index}" style="display:none;" onclick="saveNewsAsAnalysis('${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">Save Analysis</button>
+            </div>
+            <div class="analysis-result" id="analysis-latest-${index}" style="display:none;"></div>
+          </div>
+        `).join('');
       } catch (error) {
-        console.error('Error loading latest news:', error);
         list.innerHTML = '<p style="color: #e53935; text-align: center;">Error loading latest news.</p>';
       }
     }
@@ -1086,43 +1166,34 @@
               articles.forEach(art => art.ticker = ticker);
               allTrendingArticles.push(...articles);
             }
-          } catch (e) {
-            console.warn(`Error fetching trending news for ${ticker}`);
-          }
+          } catch (e) {}
         }
 
         if (allTrendingArticles.length === 0) {
-          list.innerHTML = '<p style="color: #aaa; text-align: center;">No trending news available at the moment.</p>';
+          list.innerHTML = '<p style="color: rgba(255,255,255,.55); text-align: center;">No trending news available at the moment.</p>';
           return;
         }
 
-        const trendingArticle = allTrendingArticles[0];
+        const a = allTrendingArticles[0];
 
-        const trendingArticleHtml = `
+        list.innerHTML = `
           <div class="news-item trending-news-item" id="trending-news-0">
-            <div style="position: absolute; bottom: 15px; right: 15px; background: linear-gradient(135deg, #ff6b35, #d63031); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
+            <div style="position:absolute; bottom:12px; right:12px; background:linear-gradient(135deg,#ff6b35,#d63031); color:#fff; padding:6px 10px; border-radius:999px; font-size:11px; font-weight:900;">
               🔥 Trending
             </div>
             <div class="news-header">
-              <h4>${trendingArticle.title}</h4>
-              <span class="news-source">${trendingArticle.source}</span>
+              <h4>${a.title}</h4>
+              <span class="news-source">${a.source}</span>
             </div>
-            <p>${trendingArticle.description}</p>
+            <p>${a.description}</p>
             <div class="news-actions">
-              <button class="btn-analyze-news" onclick="analyzeNewsArticle(0, '${trendingArticle.title.replace(/'/g, "\\'")}', '${trendingArticle.description.replace(/'/g, "\\'")}')">
-                Analyse
-              </button>
-              <button class="btn-save-news" id="save-trending-0" style="display: none;" onclick="saveNewsAsAnalysis('${trendingArticle.title.replace(/'/g, "\\'")}', '${trendingArticle.description.replace(/'/g, "\\'")}')">
-                Save Analysis
-              </button>
+              <button class="btn-analyze-news" onclick="analyzeNewsArticle('trending-0', '${a.title.replace(/'/g, "\\'")}', '${a.description.replace(/'/g, "\\'")}')">Analyse</button>
+              <button class="btn-save-news" id="save-trending-0" style="display:none;" onclick="saveNewsAsAnalysis('${a.title.replace(/'/g, "\\'")}', '${a.description.replace(/'/g, "\\'")}')">Save Analysis</button>
             </div>
-            <div class="analysis-result" id="analysis-trending-0" style="display: none;"></div>
+            <div class="analysis-result" id="analysis-trending-0" style="display:none;"></div>
           </div>
         `;
-
-        list.innerHTML = trendingArticleHtml;
       } catch (error) {
-        console.error('Error loading trending news:', error);
         list.innerHTML = '<p style="color: #e53935; text-align: center;">Error loading trending news.</p>';
       }
     }
@@ -1132,14 +1203,14 @@
       if (!query) return alert('Please enter a ticker or company name');
 
       const newsList = document.getElementById('newsList');
-      newsList.innerHTML = '<p style="color: #aaa; text-align: center;">Searching news...</p>';
+      newsList.innerHTML = '<p style="color: rgba(255,255,255,.55); text-align: center;">Searching news...</p>';
 
       try {
         const response = await fetch(`/api/news/${query}`);
         const articles = await response.json();
-        
+
         if (!articles || articles.length === 0) {
-          newsList.innerHTML = '<p style="color: #aaa; text-align: center;">No news found.</p>';
+          newsList.innerHTML = '<p style="color: rgba(255,255,255,.55); text-align: center;">No news found.</p>';
           return;
         }
 
@@ -1151,18 +1222,13 @@
             </div>
             <p>${article.description}</p>
             <div class="news-actions">
-              <button class="btn-analyze-news" onclick="analyzeNewsArticle('search-${index}', '${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
-                Analyse
-              </button>
-              <button class="btn-save-news" id="save-search-${index}" style="display: none;" onclick="saveNewsAsAnalysis('${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">
-                Save Analysis
-              </button>
+              <button class="btn-analyze-news" onclick="analyzeNewsArticle('search-${index}', '${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">Analyse</button>
+              <button class="btn-save-news" id="save-search-${index}" style="display:none;" onclick="saveNewsAsAnalysis('${article.title.replace(/'/g, "\\'")}', '${article.description.replace(/'/g, "\\'")}')">Save Analysis</button>
             </div>
-            <div class="analysis-result" id="analysis-search-${index}" style="display: none;"></div>
+            <div class="analysis-result" id="analysis-search-${index}" style="display:none;"></div>
           </div>
         `).join('');
       } catch (error) {
-        console.error('Error fetching news:', error);
         newsList.innerHTML = '<p style="color: #e53935; text-align: center;">Error loading news. Please try again.</p>';
       }
     }
@@ -1173,133 +1239,74 @@
       }
     });
 
-    async function analyzeNewsArticle(index, title, description) {
-      const analysisDiv = document.getElementById(`analysis-${index}`) ||
-                         document.getElementById(`analysis-trending-${index}`) ||
-                         document.getElementById(`analysis-latest-${index}`);
-      
-      if (!analysisDiv) return;
-      
-      analysisDiv.innerHTML = '<p style="color: #aaa; text-align: center; margin-top: 10px;">Analyzing sentiment...</p>';
-      analysisDiv.style.display = 'block';
-      
+    // ✅ FIXED: stable element targeting (no messy fallbacks)
+    async function analyzeNewsArticle(key, title, description) {
+      const analysisEl = document.getElementById(`analysis-${key}`);
+      if (!analysisEl) return;
+
+      analysisEl.innerHTML = '<p style="color: rgba(255,255,255,.55); text-align:center; margin:0;">Analyzing sentiment...</p>';
+      analysisEl.style.display = 'block';
+
       try {
         const response = await fetch('/api/analyze-sentiment', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ text: title + ' ' + description, title: title })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: title + ' ' + description, title })
         });
 
         if (!response.ok) throw new Error('API error');
-        
+
         const result = await response.json();
         const sentiment = result.sentiment || 'NEUTRAL';
         const scores = result.scores || { positive: 0, negative: 0, neutral: 100 };
-        const confidence = result.confidence || (Math.max(scores.positive || 0, scores.neutral || 0, scores.negative || 0));
+        const confidence = result.confidence || Math.max(scores.positive||0, scores.neutral||0, scores.negative||0);
 
-        let sentimentColor = '#999';
-        let sentimentBg = 'rgba(153, 153, 153, 0.1)';
-        if (sentiment === 'POSITIVE') {
-          sentimentColor = '#4caf50';
-          sentimentBg = 'rgba(76, 175, 80, 0.15)';
-        } else if (sentiment === 'NEGATIVE') {
-          sentimentColor = '#e53935';
-          sentimentBg = 'rgba(229, 57, 53, 0.15)';
-        }
+        let sentimentColor = 'rgba(255,255,255,.55)';
+        let sentimentBg = 'rgba(255,255,255,.06)';
+        if (sentiment === 'POSITIVE') { sentimentColor = '#34d399'; sentimentBg = 'rgba(52,211,153,.12)'; }
+        if (sentiment === 'NEGATIVE') { sentimentColor = '#f87171'; sentimentBg = 'rgba(248,113,113,.12)'; }
 
-        const html = `
-          <div style="background-color: ${sentimentBg}; padding: 12px; border-radius: 6px; border-left: 4px solid ${sentimentColor};">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <strong style="color: ${sentimentColor}; font-size: 1.1rem;">Sentiment: ${sentiment}</strong>
-              <div style="background-color: rgba(0, 0, 0, 0.2); padding: 4px 10px; border-radius: 4px;">
-                <span style="color: #fff; font-weight: 600; font-size: 0.9rem;">Confidence: ${Math.round(confidence)}%</span>
-              </div>
+        analysisEl.innerHTML = `
+          <div style="background:${sentimentBg}; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.10);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <strong style="color:${sentimentColor}; font-size:14px;">Sentiment: ${sentiment}</strong>
+              <span style="color:rgba(255,255,255,.75); font-weight:900; font-size:12px;">Confidence: ${Math.round(confidence)}%</span>
             </div>
-            <div style="margin-top: 8px; display: flex; gap: 15px;">
-              <div>
-                <span style="color: #4caf50; font-weight: 600;">Positive</span><br>
-                <span style="color: #4caf50; font-size: 1.3rem; font-weight: bold;">${Math.round(scores.positive || 0)}%</span>
-              </div>
-              <div>
-                <span style="color: #999; font-weight: 600;">Neutral</span><br>
-                <span style="color: #999; font-size: 1.3rem; font-weight: bold;">${Math.round(scores.neutral || 0)}%</span>
-              </div>
-              <div>
-                <span style="color: #e53935; font-weight: 600;">Negative</span><br>
-                <span style="color: #e53935; font-size: 1.3rem; font-weight: bold;">${Math.round(scores.negative || 0)}%</span>
-              </div>
+            <div style="margin-top:10px; display:flex; gap:16px; flex-wrap:wrap;">
+              <div><span style="color:#34d399; font-weight:900;">Positive</span><div style="color:#34d399; font-size:18px; font-weight:1000;">${Math.round(scores.positive || 0)}%</div></div>
+              <div><span style="color:rgba(255,255,255,.65); font-weight:900;">Neutral</span><div style="color:rgba(255,255,255,.65); font-size:18px; font-weight:1000;">${Math.round(scores.neutral || 0)}%</div></div>
+              <div><span style="color:#f87171; font-weight:900;">Negative</span><div style="color:#f87171; font-size:18px; font-weight:1000;">${Math.round(scores.negative || 0)}%</div></div>
             </div>
           </div>
         `;
 
-        analysisDiv.innerHTML = html;
-
-        // Highlight the news item based on sentiment
-        const newsItem = document.getElementById(`search-news-${index}`) ||
-                        document.getElementById(`trending-news-${index}`) ||
-                        document.getElementById(`latest-news-${index}`);
-        if (newsItem) {
-          if (sentiment === 'POSITIVE') {
-            newsItem.style.borderLeft = '5px solid #4caf50';
-            newsItem.style.backgroundColor = 'rgba(76, 175, 80, 0.05)';
-          } else if (sentiment === 'NEGATIVE') {
-            newsItem.style.borderLeft = '5px solid #e53935';
-            newsItem.style.backgroundColor = 'rgba(229, 57, 53, 0.05)';
-          } else {
-            newsItem.style.borderLeft = '5px solid #999';
-            newsItem.style.backgroundColor = 'rgba(153, 153, 153, 0.05)';
-          }
-        }
-
-        // Show save button
-        const saveBtn = document.getElementById(`save-${index}`) ||
-                       document.getElementById(`save-trending-${index}`) ||
-                       document.getElementById(`save-latest-${index}`) || 
-                       document.getElementById(`save-btn-${index}`);
+        // show save button for this key
+        const saveBtn = document.getElementById(`save-${key}`);
         if (saveBtn) saveBtn.style.display = 'inline-block';
 
       } catch (error) {
-        console.error('Error analyzing news:', error);
-        analysisDiv.innerHTML = '<p style="color: #e53935;">Error analyzing sentiment.</p>';
+        analysisEl.innerHTML = '<p style="color:#f87171; margin:0;">Error analyzing sentiment.</p>';
       }
     }
 
     function saveNewsAsAnalysis(title, description) {
-      // Get existing analyses from localStorage
       const analyses = JSON.parse(localStorage.getItem('analyses') || '[]');
-      
-      // Create new analysis object
-      const newAnalysis = {
-        id: Date.now(), // Use timestamp as unique ID
-        title: title,
+      analyses.push({
+        id: Date.now(),
+        title,
         content: description,
         notes: '',
-        date: new Date().toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric'
-        }),
+        date: new Date().toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }),
         isFavorite: false
-      };
-      
-      // Add to analyses array
-      analyses.push(newAnalysis);
-      
-      // Save back to localStorage
+      });
       localStorage.setItem('analyses', JSON.stringify(analyses));
-      
-      // Show success message
       alert(`✅ Analysis saved! Check your "Saved Analysis" in the Account page to view all saved articles.`);
     }
 
-    // Load news on page load
     window.addEventListener('DOMContentLoaded', function() {
       loadLatestNews();
       loadTrendingNews();
     });
   </script>
-
 </body>
 </html>

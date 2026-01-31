@@ -1,9 +1,11 @@
 /*
   portfolioController.js
+  --------------------------------------------------
   Handles:
-  - GET /portfolio (page render)
-  - GET /api/portfolio-live (live prices + allocation + P/L + risk warning)
-  - GET /api/portfolio-history (30D portfolio value series)
+  - GET  /portfolio
+  - GET  /api/portfolio-live
+  - GET  /api/portfolio-history
+  - CRUD /api/holdings (REAL holdings only)
 */
 
 "use strict";
@@ -24,15 +26,39 @@ const DEMO_PORTFOLIO_HOLDINGS = [
   { symbol: "AMZN", qty: 10, avg: 98.32 }
 ];
 
-/* DB helpers */
-async function getUserHoldingsFromDb(userId) {
+/* ==================================================
+   DB HELPERS
+   ================================================== */
+
+async function ensureAccountExists(userId) {
+  // Ensure PERSONAL account exists (do not touch PAPER wallet here)
   try {
-    const [rows] = await db
-      .promise()
-      .query(
-        "SELECT symbol, qty, avgPrice AS avg FROM user_holdings WHERE userId = ? AND qty > 0 ORDER BY symbol ASC",
-        [userId]
-      );
+    const [rows] = await db.promise().query(
+      "SELECT accountId FROM accounts WHERE userId = ? AND accountType='personal' LIMIT 1",
+      [userId]
+    );
+
+    if (rows?.length) return rows[0].accountId;
+
+    const acctNo = `ACC-${String(userId).padStart(6, "0")}`;
+    const [ins] = await db.promise().query(
+      "INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, currency) VALUES (?,?, 'personal','active', 0.00, 'USD')",
+      [userId, acctNo]
+    );
+
+    return ins.insertId;
+  } catch {
+    return null;
+  }
+}
+
+async function getUserHoldingsFromDb(userId) {
+  // ✅ REAL holdings only
+  try {
+    const [rows] = await db.promise().query(
+      "SELECT symbol, qty, avgPrice AS avg FROM user_holdings WHERE userId = ? AND mode='REAL' AND qty > 0 ORDER BY symbol ASC",
+      [userId]
+    );
 
     if (!Array.isArray(rows) || rows.length === 0) return null;
 
@@ -46,16 +72,18 @@ async function getUserHoldingsFromDb(userId) {
   }
 }
 
+// Treat risk profile as "not done" if completedAt is NULL
 async function getUserRiskTolerance(userId) {
   try {
-    const [rows] = await db
-      .promise()
-      .query(
-        "SELECT riskTolerance FROM user_risk_profiles WHERE userId = ? ORDER BY updated_at DESC LIMIT 1",
-        [userId]
-      );
+    const [rows] = await db.promise().query(
+      "SELECT riskTolerance, completedAt FROM user_risk_profiles WHERE userId = ? ORDER BY updated_at DESC LIMIT 1",
+      [userId]
+    );
 
-    return rows?.[0]?.riskTolerance ? String(rows[0].riskTolerance) : null;
+    if (!rows?.length) return null;
+    if (!rows[0].completedAt) return null;
+
+    return rows[0].riskTolerance ? String(rows[0].riskTolerance) : null;
   } catch {
     return null;
   }
@@ -76,9 +104,16 @@ function riskRank(level) {
   return 0;
 }
 
-/* Page render */
+/* ==================================================
+   PAGE RENDER
+   ================================================== */
+
 async function page(req, res) {
   const userId = req.session.user?.userId;
+
+  if (userId) {
+    await ensureAccountExists(userId);
+  }
 
   const holdingsFromDb = userId ? await getUserHoldingsFromDb(userId) : null;
   const holdings = holdingsFromDb || DEMO_PORTFOLIO_HOLDINGS;
@@ -94,7 +129,10 @@ async function page(req, res) {
   });
 }
 
-/* Live API */
+/* ==================================================
+   LIVE API
+   ================================================== */
+
 async function live(req, res) {
   const userId = req.session.user?.userId;
 
@@ -113,7 +151,6 @@ async function live(req, res) {
       const qty = Number(h.qty || 0);
       const avg = Number(h.avg || 0);
 
-      // Default to avg cost if live price fails
       let livePriceToUse = Number.isFinite(avg) ? avg : 0;
       let sourceToUse = "avg-fallback";
       let staleToUse = true;
@@ -133,12 +170,10 @@ async function live(req, res) {
       const marketValue = Number.isFinite(livePriceToUse) ? livePriceToUse * qty : 0;
       totalValue += marketValue;
 
-      // P/L requires avg price (avg is your cost basis)
       const pl = (livePriceToUse - avg) * qty;
       const cost = avg * qty;
       const plPercent = cost > 0 ? (pl / cost) * 100 : 0;
 
-      // Stock risk estimate (free)
       const stockRisk = await quoteController.estimateStockRiskLevel(sym);
       const riskWarning =
         userRiskTol && stockRisk ? riskRank(stockRisk) > riskRank(userRiskTol) : false;
@@ -162,12 +197,12 @@ async function live(req, res) {
     res.json({
       ok: true,
       totalValue: Math.round(totalValue * 100) / 100,
-      allocation
+      allocation,
+      riskProfileCompleted: !!userRiskTolRaw
     });
   } catch (err) {
     console.error("PORTFOLIO LIVE ERROR:", err?.message || err);
 
-    // Return JSON to keep frontend stable
     res.status(200).json({
       ok: false,
       totalValue: 0,
@@ -184,12 +219,16 @@ async function live(req, res) {
         userRiskTolerance: null,
         stockRisk: null,
         riskWarning: false
-      }))
+      })),
+      riskProfileCompleted: false
     });
   }
 }
 
-/* 30D portfolio history (cached per user) */
+/* ==================================================
+   30D PORTFOLIO HISTORY (cached per user)
+   ================================================== */
+
 const portfolioHistoryCacheByUser = new Map(); // userId -> { ts, data }
 const PORTFOLIO_HISTORY_TTL_MS = 5 * 60 * 1000;
 
@@ -213,7 +252,6 @@ async function history(req, res) {
       return res.json(empty);
     }
 
-    // Fetch 30D series for each symbol (Stooq)
     const seriesBySymbol = {};
     for (const h of holdings) {
       const s = String(h.symbol).toUpperCase();
@@ -251,4 +289,143 @@ async function history(req, res) {
   }
 }
 
-module.exports = { init, page, live, history };
+/* ==================================================
+   HOLDINGS CRUD (REAL only)
+   ================================================== */
+
+async function listHoldings(req, res) {
+  const userId = req.session.user?.userId;
+  if (!userId) return res.status(401).json({ ok: false, error: "Not logged in" });
+
+  try {
+    const [rows] = await db.promise().query(
+      "SELECT symbol, qty, avgPrice FROM user_holdings WHERE userId=? AND mode='REAL' ORDER BY symbol ASC",
+      [userId]
+    );
+
+    res.json({
+      ok: true,
+      holdings: (rows || []).map((r) => ({
+        symbol: String(r.symbol || "").toUpperCase(),
+        qty: Number(r.qty || 0),
+        avgPrice: Number(r.avgPrice || 0)
+      }))
+    });
+  } catch (e) {
+    console.error("listHoldings error:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to load holdings" });
+  }
+}
+
+async function createHolding(req, res) {
+  const userId = req.session.user?.userId;
+  if (!userId) return res.status(401).json({ ok: false, error: "Not logged in" });
+
+  const symbol = String(req.body.symbol || "").toUpperCase().trim();
+  const qty = Number(req.body.qty);
+  const avgPrice = Number(req.body.avgPrice);
+
+  if (!symbol) return res.status(400).json({ ok: false, error: "Missing symbol" });
+  if (!Number.isFinite(qty) || qty <= 0) return res.status(400).json({ ok: false, error: "qty must be > 0" });
+  if (!Number.isFinite(avgPrice) || avgPrice <= 0) return res.status(400).json({ ok: false, error: "avgPrice must be > 0" });
+
+  try {
+    await db.promise().query(
+      `INSERT INTO user_holdings (userId, symbol, qty, avgPrice, mode)
+       VALUES (?, ?, ?, ?, 'REAL')
+       ON DUPLICATE KEY UPDATE
+         qty = VALUES(qty),
+         avgPrice = VALUES(avgPrice),
+         mode = 'REAL'`,
+      [userId, symbol, qty, avgPrice]
+    );
+
+    // Optional audit tx (REAL)
+    await db.promise().query(
+      `INSERT INTO stock_transactions (userId, symbol, txType, qty, price, dataSource, isStale, mode)
+       VALUES (?, ?, 'BUY', ?, ?, 'cache', 1, 'REAL')`,
+      [userId, symbol, qty, avgPrice]
+    );
+
+    portfolioHistoryCacheByUser.delete(userId);
+
+    res.json({ ok: true, message: "Holding saved", symbol, qty, avgPrice });
+  } catch (e) {
+    console.error("createHolding error:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to create holding" });
+  }
+}
+
+async function updateHolding(req, res) {
+  const userId = req.session.user?.userId;
+  if (!userId) return res.status(401).json({ ok: false, error: "Not logged in" });
+
+  const symbol = String(req.params.symbol || "").toUpperCase().trim();
+  const qty = Number(req.body.qty);
+  const avgPrice = Number(req.body.avgPrice);
+
+  if (!symbol) return res.status(400).json({ ok: false, error: "Missing symbol" });
+  if (!Number.isFinite(qty) || qty < 0) return res.status(400).json({ ok: false, error: "qty must be >= 0" });
+  if (!Number.isFinite(avgPrice) || avgPrice < 0) return res.status(400).json({ ok: false, error: "avgPrice must be >= 0" });
+
+  try {
+    if (qty === 0) {
+      await db.promise().query(
+        "DELETE FROM user_holdings WHERE userId=? AND symbol=? AND mode='REAL'",
+        [userId, symbol]
+      );
+      portfolioHistoryCacheByUser.delete(userId);
+      return res.json({ ok: true, message: "Holding removed (qty=0)", symbol });
+    }
+
+    const [result] = await db.promise().query(
+      "UPDATE user_holdings SET qty=?, avgPrice=? WHERE userId=? AND symbol=? AND mode='REAL'",
+      [qty, avgPrice, userId, symbol]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ ok: false, error: "Holding not found" });
+    }
+
+    portfolioHistoryCacheByUser.delete(userId);
+
+    res.json({ ok: true, message: "Holding updated", symbol, qty, avgPrice });
+  } catch (e) {
+    console.error("updateHolding error:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to update holding" });
+  }
+}
+
+async function deleteHolding(req, res) {
+  const userId = req.session.user?.userId;
+  if (!userId) return res.status(401).json({ ok: false, error: "Not logged in" });
+
+  const symbol = String(req.params.symbol || "").toUpperCase().trim();
+  if (!symbol) return res.status(400).json({ ok: false, error: "Missing symbol" });
+
+  try {
+    const [result] = await db.promise().query(
+      "DELETE FROM user_holdings WHERE userId=? AND symbol=? AND mode='REAL'",
+      [userId, symbol]
+    );
+
+    portfolioHistoryCacheByUser.delete(userId);
+
+    res.json({ ok: true, deleted: result.affectedRows > 0, symbol });
+  } catch (e) {
+    console.error("deleteHolding error:", e?.message || e);
+    res.status(500).json({ ok: false, error: "Failed to delete holding" });
+  }
+}
+
+module.exports = {
+  init,
+  page,
+  live,
+  history,
+  // CRUD exports
+  listHoldings,
+  createHolding,
+  updateHolding,
+  deleteHolding
+};

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || "Paper Trading" %></title>
+
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/portfolio.css" />
+
+  <style>
+    .pt-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+    .pt-kpi { display:flex; gap:12px; flex-wrap:wrap; }
+    .kpi-box { padding:14px 16px; border-radius:14px; border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.04); }
+    .kpi-label{ font-size:12px; color:rgba(255,255,255,.65); }
+    .kpi-value{ font-size:20px; font-weight:900; color:#fff; margin-top:4px; }
+
+    .holding-form .form-grid{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; }
+    .form-label{ display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:6px; }
+    .form-input{ width:100%; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:#101010; color:#fff; }
+    .btn-row{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+    .p-btn{ padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#111; color:#eee; cursor:pointer; }
+    .p-btn.primary{ background:#00eaff; color:#000; border-color:transparent; font-weight:800; }
+    .p-btn.danger{ border-color: rgba(229,57,53,.5); }
+    .row-btn{ padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#111; color:#eee; cursor:pointer; font-size:12px; }
+    .row-btn.sell-all {border-color: rgba(239,68,68,.6);}
+
+
+    .pl-pos { color: #34d399 !important; font-weight: 800; }
+    .pl-neg { color: #f87171 !important; font-weight: 800; }
+
+    /* NEW: action buttons like real portals */
+    .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .row-btn.buy { border-color: rgba(16,185,129,.35); }
+    .row-btn.sell { border-color: rgba(239,68,68,.35); }
+  </style>
+</head>
+
+<%- include('partials/head') %>
+<body class="portfolio-page">
+  <%- include("partials/navbar") %>
+
+  <%
+    const acct = account || {};
+    const balance = Number(acct.balance ?? 0);
+    const invested = Number(acct.totalInvested ?? 0);
+    const returns = Number(acct.totalReturns ?? 0);
+    const holdings = Array.isArray(holdingsList) ? holdingsList : [];
+  %>
+
+  <main class="portfolio-shell">
+    <div class="pt-top">
+      <div>
+        <h1 class="portfolio-title">Paper Trading</h1>
+        <div class="portfolio-subtitle">Virtual portfolio — trades execute at live market price.</div>
+      </div>
+
+      <div class="pt-kpi">
+        <div class="kpi-box">
+          <div class="kpi-label">Wallet Balance</div>
+          <div id="kpiBalance" class="kpi-value">$<%= balance.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) %></div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">Total Invested</div>
+          <div id="kpiInvested" class="kpi-value">$<%= invested.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) %></div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-label">Total Returns</div>
+          <div id="kpiReturns" class="kpi-value">$<%= returns.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) %></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="portfolio-grid" style="margin-top:18px;">
+      <div class="left-stack">
+        <section class="p-card">
+          <div class="card-row">
+            <h2 class="card-title">Place Order</h2>
+            <div class="subtext">Enter quantity. Price is fetched live when you submit.</div>
+          </div>
+
+          <form id="paperForm" class="holding-form">
+            <div class="form-grid">
+              <div>
+                <label class="form-label">Symbol</label>
+                <input id="pSymbol" class="form-input" placeholder="AAPL" required />
+              </div>
+
+              <div>
+                <label class="form-label">Qty</label>
+                <input id="pQty" class="form-input" type="number" step="0.0001" min="0.0001" placeholder="10" required />
+              </div>
+
+              <div>
+                <label class="form-label">Action</label>
+                <select id="pAction" class="form-input" required>
+                  <option value="BUY">BUY</option>
+                  <option value="SELL">SELL</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="submit" class="p-btn primary">Submit Order</button>
+              <button type="button" id="clearPaperBtn" class="p-btn">Clear</button>
+            </div>
+
+            <div id="paperMsg" class="subtext" style="margin-top:10px;"></div>
+          </form>
+        </section>
+
+        <section class="p-card">
+          <div class="card-row">
+            <h2 class="card-title">Positions</h2>
+            <div class="subtext">Cost Price = your average paid price per share.</div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="p-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Qty</th>
+                  <th>Cost Price</th>
+                  <th>Live Price</th>
+                  <th>Market Value</th>
+                  <th>P/L</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <% if (holdings.length === 0) { %>
+                  <tr><td colspan="7" class="subtext">No paper holdings yet.</td></tr>
+                <% } else { %>
+                  <% holdings.forEach(h => {
+                      const sym = String(h.symbol||'').toUpperCase();
+                      const qty = Number(h.qty||0);
+                      const costAvg = Number(h.avgPrice||0);
+                  %>
+                    <tr data-symbol="<%= sym %>">
+                      <td class="sym"><%= sym %></td>
+                      <td class="qty" data-qty="<%= qty %>"><%= qty %></td>
+                      <td class="costAvg" data-avg="<%= costAvg %>">$<%= costAvg.toFixed(2) %></td>
+                      <td class="livePrice muted">—</td>
+                      <td class="marketValue muted">—</td>
+                      <td class="pl muted">—</td>
+                      <td style="text-align:right;">
+                        <div class="actions">
+                          <button class="row-btn buy" data-action="BUY" data-sym="<%= sym %>">Buy</button>
+                          <button class="row-btn sell" data-action="SELL" data-sym="<%= sym %>">Sell</button>
+                          <button class="row-btn sell-all" data-sym="<%= sym %>">Sell All</button>
+
+                        </div>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="right-stack">
+        <section class="p-card">
+          <div class="card-row">
+            <h2 class="card-title">Order History</h2>
+            <div class="subtext">Stored in stock_transactions</div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="p-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>Symbol</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (!Array.isArray(txs) || txs.length === 0) { %>
+                  <tr><td colspan="5" class="subtext">No trades yet.</td></tr>
+                <% } else { %>
+                  <% txs.forEach(t => { %>
+                    <tr>
+                      <td class="muted"><%= new Date(t.created_at).toLocaleString() %></td>
+                      <td><%= t.txType %></td>
+                      <td class="sym"><%= String(t.symbol||'').toUpperCase() %></td>
+                      <td><%= Number(t.qty||0) %></td>
+                      <td>$<%= Number(t.price||0).toFixed(2) %></td>
+                    </tr>
+                  <% }) %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="p-card">
+          <div class="card-row">
+            <a href="/portfolio" class="p-btn" style="text-decoration:none;">← Back to Portfolio</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function setMsg(text, ok=true) {
+      const el = document.getElementById("paperMsg");
+      el.textContent = text || "";
+      el.style.color = ok ? "rgba(255,255,255,.75)" : "#e53935";
+    }
+
+    function money(n){
+      const x = Number(n||0);
+      return "$" + x.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    async function refreshKpis(){
+      try{
+        const r = await fetch("/api/paper-summary");
+        const j = await r.json().catch(()=>null);
+        if(!r.ok || !j?.ok) return;
+
+        document.getElementById("kpiBalance").textContent = money(j.balance);
+        document.getElementById("kpiInvested").textContent = money(j.totalInvested);
+        document.getElementById("kpiReturns").textContent = money(j.totalReturns);
+      }catch{}
+    }
+
+    async function refreshLivePrices(){
+      const rows = document.querySelectorAll("tr[data-symbol]");
+      for(const row of rows){
+        const sym = row.getAttribute("data-symbol");
+        const qty = Number(row.querySelector(".qty")?.textContent || 0);
+        const costAvg = Number(row.querySelector(".costAvg")?.dataset.avg || 0);
+
+        try{
+          const r = await fetch(`/api/quote/${encodeURIComponent(sym)}`);
+          const j = await r.json().catch(()=>null);
+          const live = Number(j?.quote?.c);
+
+          const liveCell = row.querySelector(".livePrice");
+          const mvCell = row.querySelector(".marketValue");
+          const plCell = row.querySelector(".pl");
+
+          if(Number.isFinite(live) && live > 0){
+            liveCell.classList.remove("muted");
+            liveCell.textContent = money(live);
+
+            const mv = live * qty;
+            mvCell.classList.remove("muted");
+            mvCell.textContent = money(mv);
+
+            const pl = (live - costAvg) * qty;
+            plCell.classList.remove("muted");
+            plCell.classList.toggle("pl-pos", pl >= 0);
+            plCell.classList.toggle("pl-neg", pl < 0);
+            plCell.textContent = (pl >= 0 ? "+" : "-") + money(Math.abs(pl));
+          }
+        }catch{}
+      }
+    }
+
+    function fillOrder(action, symbol, qtyPref){
+      document.getElementById("pSymbol").value = String(symbol||"").toUpperCase();
+      document.getElementById("pAction").value = action;
+      document.getElementById("pQty").value = qtyPref;
+      document.getElementById("pQty").focus();
+      setMsg(`${action} prepared for ${String(symbol||"").toUpperCase()}. Adjust Qty and click Submit.`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.getElementById("clearPaperBtn")?.addEventListener("click", () => {
+      document.getElementById("pSymbol").value = "";
+      document.getElementById("pQty").value = "";
+      document.getElementById("pAction").value = "BUY";
+      setMsg("");
+    });
+
+    document.getElementById("paperForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const symbol = String(document.getElementById("pSymbol").value || "").toUpperCase().trim();
+      const qty = Number(document.getElementById("pQty").value);
+      const txType = String(document.getElementById("pAction").value || "BUY").toUpperCase();
+
+      if (!symbol) return setMsg("Symbol is required", false);
+      if (!Number.isFinite(qty) || qty <= 0) return setMsg("Qty must be > 0", false);
+
+      setMsg("Submitting order...");
+
+      try {
+        const res = await fetch("/api/paper-trades", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbol, qty, txType })
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) return setMsg(data?.error || "Order failed", false);
+
+        setMsg(`Executed ${txType} at ${money(data.price)}. Updating...`);
+
+        await refreshKpis();
+        await refreshLivePrices();
+        setTimeout(() => location.reload(), 350);
+      } catch {
+        setMsg("Network error", false);
+      }
+    });
+
+    // NEW: row actions
+    document.querySelectorAll(".row-btn.buy, .row-btn.sell").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const action = btn.dataset.action;
+        const sym = btn.dataset.sym;
+
+        const row = btn.closest("tr[data-symbol]");
+        const owned = Number(row?.querySelector(".qty")?.textContent || 0);
+
+        // Suggest qty:
+        // - BUY: 1 share default
+        // - SELL: default to owned (user can change to partial)
+        const qtyPref = action === "SELL" ? (owned > 0 ? owned : 1) : 1;
+
+        fillOrder(action, sym, qtyPref);
+      });
+    });
+
+    // SELL ALL (realistic paper trading)
+    document.querySelectorAll(".row-btn.sell-all").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+
+        const sym = btn.dataset.sym;
+        const row = btn.closest("tr[data-symbol]");
+        const owned = Number(row?.querySelector(".qty")?.textContent || 0);
+
+        if (!owned || owned <= 0) {
+        return alert(`No shares of ${sym} to sell.`);
+        }
+
+        if (!confirm(`Sell ALL ${owned} shares of ${sym} at market price?`)) return;
+
+        try {
+        const res = await fetch("/api/paper-trades", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+            symbol: sym,
+            qty: owned,
+            txType: "SELL"
+            })
+        });
+
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) {
+            return alert(data?.error || "Sell failed");
+        }
+
+        await refreshKpis();
+        await refreshLivePrices();
+        setTimeout(() => location.reload(), 300);
+        } catch {
+        alert("Network error");
+        }
+    });
+    });
+
+    // init
+    refreshKpis();
+    refreshLivePrices();
+    setInterval(() => { refreshKpis(); refreshLivePrices(); }, 30000);
+  </script>
+</body>
+</html>

@@ -28,16 +28,18 @@ const authController = require("./controllers/authController");
 const profileController = require("./controllers/profileController");
 const adminController = require("./controllers/adminController");
 
-// New controllers (add these files in /controllers)
+
 const quoteController = require("./controllers/quoteController");
 const apiController = require("./controllers/apiController");
 const marketController = require("./controllers/marketController");
 const portfolioController = require("./controllers/portfolioController");
+const paperTradingController = require("./controllers/paperTradingController");
 const watchlistController = require("./controllers/watchlistController");
 const alertsController = require("./controllers/alertsController");
 const { getCalendarEvents } = require("./controllers/economicCalendarController");
 const newsController = require("./controllers/newsController");
 const sentimentController = require("./controllers/sentimentController");
+
 
 // Middleware
 const { checkAuthenticated, checkAdmin } = require("./middleware/auth");
@@ -69,21 +71,22 @@ app.use(
 
 app.use(flash());
 
-/* Content Security Policy - Allow PayPal and Stripe */
+/* Content Security Policy - Allow PayPal and Stripe and TradingView*/
 app.use((req, res, next) => {
   res.setHeader(
-    'Content-Security-Policy',
+    "Content-Security-Policy",
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' https://www.paypal.com https://js.stripe.com https://cdn.jsdelivr.net; " +
+    "script-src 'self' 'unsafe-inline' https://www.paypal.com https://js.stripe.com https://cdn.jsdelivr.net https://s3.tradingview.com; " +
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; " +
     "img-src 'self' data: https:; " +
     "font-src 'self' data: https://fonts.gstatic.com; " +
-    "connect-src 'self' https://www.paypal.com https://api.sandbox.paypal.com https://api.paypal.com https://api.stripe.com https://finnhub.io https://newsapi.org; " +
-    "frame-src https://www.paypal.com https://js.stripe.com; " +
+    "connect-src 'self' https:; " +
+    "frame-src 'self' https://www.paypal.com https://js.stripe.com https://s.tradingview.com https://www.tradingview.com; " +
     "frame-ancestors 'self';"
   );
   next();
 });
+
 
 /* Debug logging */
 app.use((req, res, next) => {
@@ -148,6 +151,8 @@ apiController.init({ quoteController });
 marketController.init({ quoteController });
 portfolioController.init({ quoteController });
 
+
+
 /* API routes */
 app.get("/api/health", apiController.health);
 app.get("/api/ticker", apiController.ticker);
@@ -163,6 +168,20 @@ app.get("/chart/:symbol", marketController.chart);
 app.get("/portfolio", checkAuthenticated, portfolioController.page);
 app.get("/api/portfolio-live", checkAuthenticated, portfolioController.live);
 app.get("/api/portfolio-history", checkAuthenticated, portfolioController.history);
+
+app.get("/paper-trading", checkAuthenticated, paperTradingController.page);
+app.post("/api/paper-trades", checkAuthenticated, paperTradingController.createTrade);
+app.delete("/api/paper-holdings/:symbol", checkAuthenticated, paperTradingController.deleteHolding);
+app.get("/api/paper-summary", checkAuthenticated, paperTradingController.summary);
+
+
+
+// Holdings CRUD (Portfolio)
+app.get("/api/holdings", checkAuthenticated, portfolioController.listHoldings);
+app.post("/api/holdings", checkAuthenticated, portfolioController.createHolding);
+app.put("/api/holdings/:symbol", checkAuthenticated, portfolioController.updateHolding);
+app.delete("/api/holdings/:symbol", checkAuthenticated, portfolioController.deleteHolding);
+
 
 /* News & Sentiment routes */
 app.get("/api/news/:symbol", newsController.getNews);

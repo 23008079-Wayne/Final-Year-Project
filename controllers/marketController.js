@@ -15,11 +15,28 @@ function init(deps) {
 }
 
 const ALL_STOCKS = [
-  "AAPL", "TSLA", "MSFT", "NVDA", "AMZN",
-  "GOOGL", "META", "NFLX", "BABA", "INTC",
-  "AMD", "ORCL", "ADBE", "PYPL", "CRM",
-  "UBER", "SHOP", "DIS", "SBUX", "NKE"
+  // Mega-cap Tech
+  "AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","NFLX","AMD","INTC",
+  // Payments / Fintech
+  "V","MA","PYPL","SQ",
+  // Enterprise / Cloud / Software
+  "ORCL","CRM","ADBE","NOW","IBM","SNOW","PLTR",
+  // Semis / Hardware
+  "AVGO","QCOM","TXN","MU","AMAT",
+  // Consumer / Retail
+  "DIS","NKE","SBUX","MCD","KO","PEP","COST","WMT","TGT",
+  // EV / Industrial
+  "F","GM","BA","CAT","GE",
+  // Healthcare
+  "JNJ","PFE","UNH","ABBV",
+  // Financials
+  "JPM","BAC","GS",
+  // Energy
+  "XOM","CVX",
+  // China / Others (popular tickers)
+  "BABA","TSM","SHOP","UBER"
 ];
+
 
 async function buildCards(symbols) {
   const results = [];
@@ -93,7 +110,15 @@ async function market(req, res) {
 
   try {
     const results = await buildCards(symbols);
-    res.render("market", { results, page, totalPages, watchlist: ALL_STOCKS, symbol });
+
+    res.render("market", {
+      title: "StockAI Terminal – Market",
+      results,
+      page,
+      totalPages,
+      watchlist: ALL_STOCKS,
+      symbol
+    });
   } catch (err) {
     console.error("MARKET ERROR:", err?.message || err);
     res.status(500).send("Error loading market page");
@@ -101,7 +126,7 @@ async function market(req, res) {
 }
 
 function chart(req, res) {
-  res.render("chart", { symbol: String(req.params.symbol || "").toUpperCase() });
+  res.render("chart", { title: "StockAI Terminal – Chart", symbol: String(req.params.symbol || "").toUpperCase() });
 }
 
 module.exports = { init, home, market, chart };
