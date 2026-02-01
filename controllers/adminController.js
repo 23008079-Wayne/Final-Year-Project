@@ -38,9 +38,11 @@ exports.listUsers = async (req, res) => {
   try {
     const [users] = await db.promise().query(`
       SELECT u.userId, u.username, u.email, u.roleId, u.created_at, u.isFrozen,
-             p.fullName, p.phone
+             p.fullName, p.phone,
+             a.accountNumber, a.accountType, a.accountStatus
       FROM users u
       LEFT JOIN user_profiles p ON u.userId = p.userId
+      LEFT JOIN accounts a ON u.userId = a.userId AND a.accountType = 'personal'
       ORDER BY u.userId ASC
     `);
 
@@ -174,5 +176,69 @@ exports.unfreezeUser = async (req, res) => {
     console.error(err);
     req.flash('error', 'Unable to unfreeze user.');
     res.redirect('/admin/users');
+  }
+};
+// -------- ACCOUNT APPROVAL MANAGEMENT --------
+
+// LIST PENDING ACCOUNTS
+exports.listPendingAccounts = async (req, res) => {
+  try {
+    const [allAccounts] = await db.promise().query(`
+      SELECT a.*, u.username, u.email, p.fullName
+      FROM accounts a
+      JOIN users u ON a.userId = u.userId
+      LEFT JOIN user_profiles p ON u.userId = p.userId
+      ORDER BY a.accountStatus = 'pending' DESC, a.created_at DESC
+    `);
+
+    res.render('admin_accounts', { 
+      title: 'Account Approvals',
+      accounts: allAccounts
+    });
+
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'Unable to load accounts.');
+    res.redirect('/admin/dashboard');
+  }
+};
+
+// APPROVE ACCOUNT
+exports.approveAccount = async (req, res) => {
+  const accountId = req.params.id;
+
+  try {
+    await db.promise().query(
+      'UPDATE accounts SET accountStatus = ? WHERE accountId = ?',
+      ['approved', accountId]
+    );
+
+    req.flash('success', 'Account approved successfully.');
+    res.redirect('/admin/accounts');
+
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'Unable to approve account.');
+    res.redirect('/admin/accounts');
+  }
+};
+
+// REJECT ACCOUNT
+exports.rejectAccount = async (req, res) => {
+  const accountId = req.params.id;
+
+  try {
+    await db.promise().query(
+      'UPDATE accounts SET accountStatus = ? WHERE accountId = ?',
+      ['rejected', accountId]
+    );
+
+    req.flash('success', 'Account rejected successfully.');
+    res.redirect('/admin/accounts');
+
+  } catch (err) {
+    console.error(err);
+    req.flash('error', 'Unable to reject account.');
+    res.redirect('/admin/accounts');
   }
 };

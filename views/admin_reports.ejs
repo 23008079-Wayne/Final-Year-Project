@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <style>
+    .dashboard-header {
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-card h6 {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card h3 {
+      color: var(--text-primary);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .filter-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .filter-section h5 {
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .form-label {
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .form-select {
+      background-color: #1e293b;
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.6rem 0.75rem;
+    }
+
+    .form-select:focus {
+      background-color: #1e293b;
+      border-color: var(--primary-color);
+      color: var(--text-primary);
+      box-shadow: 0 0 0 0.25rem rgba(30, 58, 138, 0.25);
+    }
+
+    .form-select option {
+      background-color: #1e293b;
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
+    .btn-success {
+      background-color: var(--success-color);
+      border-color: var(--success-color);
+      color: white;
+      font-weight: 600;
+    }
+
+    .btn-success:hover {
+      background-color: #059669;
+      border-color: #059669;
+    }
+
+    .reports-section {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    .reports-header {
+      background: transparent;
+      padding: 0;
+      border: none;
+      margin-bottom: 1.5rem;
+    }
+
+    .reports-header h5 {
+      color: #fff;
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .table-responsive {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .reports-table {
+      background-color: #1a1a1a;
+      border: none;
+      margin-bottom: 0;
+    }
+
+    .reports-table thead {
+      background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #444;
+    }
+
+    .reports-table thead th {
+      border: none;
+      padding: 18px 15px;
+      color: #aaa;
+      font-size: 0.85rem;
+      background: transparent !important;
+    }
+
+    .reports-table tbody {
+      background-color: #1a1a1a !important;
+    }
+
+    .reports-table tbody tr {
+      border-bottom: 1px solid #333;
+      transition: all 0.3s ease;
+      background-color: #1a1a1a !important;
+    }
+
+    .reports-table tbody tr:hover {
+      background-color: #252525 !important;
+      border-bottom-color: #444;
+    }
+
+    .reports-table tbody td {
+      padding: 16px 15px;
+      color: #ccc;
+      vertical-align: middle;
+      border: none;
+      background-color: transparent !important;
+    }
+
+    .reports-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .badge {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .amount-badge {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+      display: inline-block;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      opacity: 0.5;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .empty-state h5 {
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .btn-view {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+
+    .btn-view:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
+      color: white;
+      text-decoration: none;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 123, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5">
+    <div class="dashboard-header d-flex justify-content-between align-items-center">
+      <div>
+        <h1 style="margin: 0; color: var(--text-primary);">
+          <i class="fas fa-chart-bar"></i> Purchase Reports
+        </h1>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Monitor user stock purchases and identify high-value transactions</p>
+      </div>
+      <a href="/admin/dashboard" class="btn btn-primary">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+    
+    <%- include('partials/messages') %>
+
+    <!-- Statistics Cards -->
+    <div class="row mt-4 mb-4">
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-users" style="color: var(--primary-color);"></i>
+            </div>
+            <h6>Users Exceeding Threshold</h6>
+            <h3><%= usersCount || 0 %></h3>
+            <small style="color: var(--text-secondary);">in selected period</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-dollar-sign" style="color: var(--success-color);"></i>
+            </div>
+            <h6>Total Purchases</h6>
+            <h3>$<%= (totalAmount || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) %></h3>
+            <small style="color: var(--text-secondary);">combined amount</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-flag" style="color: var(--warning-color);"></i>
+            </div>
+            <h6>Current Threshold</h6>
+            <h3>$<%= (currentThreshold || 10000).toLocaleString('en-US') %></h3>
+            <small style="color: var(--text-secondary);">active filter</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <h5>
+        <i class="fas fa-filter"></i> Filter Reports
+      </h5>
+      <form method="GET" action="/admin/reports" id="filterForm">
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="daysSelect" class="form-label">Time Period</label>
+            <select id="daysSelect" name="days" class="form-select" onchange="applyFilters()">
+              <option value="7" <%= days == 7 ? 'selected' : '' %>>Last 7 Days</option>
+              <option value="30" <%= days == 30 ? 'selected' : '' %>>Last 30 Days</option>
+              <option value="90" <%= days == 90 ? 'selected' : '' %>>Last 90 Days</option>
+              <option value="365" <%= days == 365 ? 'selected' : '' %>>Last Year</option>
+            </select>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label for="thresholdSelect" class="form-label">Threshold Amount</label>
+            <select id="thresholdSelect" name="threshold" class="form-select" onchange="applyFilters()">
+              <option value="50" <%= threshold == 50 ? 'selected' : '' %>>$50</option>
+              <option value="100" <%= threshold == 100 ? 'selected' : '' %>>$100</option>
+              <option value="200" <%= threshold == 200 ? 'selected' : '' %>>$200</option>
+              <option value="500" <%= threshold == 500 ? 'selected' : '' %>>$500</option>
+              <option value="1000" <%= threshold == 1000 ? 'selected' : '' %>>$1,000</option>
+              <option value="2500" <%= threshold == 2500 ? 'selected' : '' %>>$2,500</option>
+              <option value="5000" <%= threshold == 5000 ? 'selected' : '' %>>$5,000</option>
+              <option value="10000" <%= threshold == 10000 ? 'selected' : '' %>>$10,000</option>
+              <option value="25000" <%= threshold == 25000 ? 'selected' : '' %>>$25,000</option>
+              <option value="50000" <%= threshold == 50000 ? 'selected' : '' %>>$50,000</option>
+              <option value="100000" <%= threshold == 100000 ? 'selected' : '' %>>$100,000</option>
+            </select>
+          </div>
+
+          <div class="col-md-4 mb-3 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-primary flex-fill">
+              <i class="fas fa-search"></i> Apply Filters
+            </button>
+            <a href="/admin/reports/export?days=<%= days %>&threshold=<%= threshold %>" class="btn btn-success flex-fill">
+              <i class="fas fa-download"></i> Export CSV
+            </a>
+            <button type="button" class="btn btn-danger flex-fill" onclick="clearAllTransactions()">
+              <i class="fas fa-trash"></i> Clear Transactions
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Reports Table -->
+    <div class="reports-section">
+      <div class="reports-header d-flex justify-content-between align-items-center">
+        <h5>
+          <i class="fas fa-table"></i> User Purchase Summary
+        </h5>
+        <span style="color: #aaa; font-size: 0.9rem;">
+          <%= (reports || []).length %> results found
+        </span>
+      </div>
+
+      <% if (reports && reports.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table reports-table">
+            <thead>
+              <tr>
+                <th><i class="fas fa-user"></i> Username</th>
+                <th><i class="fas fa-envelope"></i> Email</th>
+                <th><i class="fas fa-id-card"></i> Account #</th>
+                <th><i class="fas fa-dollar-sign"></i> Total Purchases</th>
+                <th><i class="fas fa-exchange-alt"></i> Transactions</th>
+                <th><i class="fas fa-calendar"></i> Last Transaction</th>
+                <th><i class="fas fa-cog"></i> Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% reports.forEach(user => { %>
+                <tr>
+                  <td><strong style="color: #fff;"><%= user.username %></strong></td>
+                  <td><%= user.email %></td>
+                  <td><%= user.userId %></td>
+                  <td>
+                    <span class="amount-badge">
+                      $<%= parseFloat(user.totalPurchases || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge badge-primary">
+                      <%= user.transactionCount || 0 %>
+                    </span>
+                  </td>
+                  <td>
+                    <% if (user.lastTransaction) { %>
+                      <%= new Date(user.lastTransaction).toLocaleDateString() %>
+                    <% } else { %>
+                      N/A
+                    <% } %>
+                  </td>
+                  <td>
+                    <a href="/admin/reports/user/<%= user.userId %>" class="btn-view">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fas fa-inbox"></i>
+          <h5>No Results Found</h5>
+          <p>No users found exceeding the threshold of $<%= (currentThreshold || 100).toLocaleString('en-US') %> in the selected period.</p>
+          <p style="font-size: 0.9rem; margin-top: 1rem;">
+            Try adjusting the time period or lowering the threshold amount.
+          </p>
+        </div>
+      <% } %>
+    </div>
+
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    function applyFilters() {
+      document.getElementById('filterForm').submit();
+    }
+
+    function clearAllTransactions() {
+      if (confirm('⚠️ This will DELETE ALL transactions from the database. Are you sure? This cannot be undone!')) {
+        if (confirm('Are you REALLY sure? This is permanent!')) {
+          fetch('/admin/reports/clear-transactions', {
+            method: 'POST'
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              alert('✅ All transactions cleared successfully!');
+              location.reload();
+            } else {
+              alert('❌ Error: ' + data.error);
+            }
+          })
+          .catch(err => {
+            console.error('Error:', err);
+            alert('❌ Failed to clear transactions');
+          });
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -27,7 +27,7 @@ const db = require("./db");
 const authController = require("./controllers/authController");
 const profileController = require("./controllers/profileController");
 const adminController = require("./controllers/adminController");
-
+const reportsController = require("./controllers/reportsController");
 
 const quoteController = require("./controllers/quoteController");
 const apiController = require("./controllers/apiController");
@@ -224,6 +224,12 @@ app.get("/login", authController.showLogin);
 app.post("/login", authController.login);
 
 app.get("/logout", authController.logout);
+
+app.get("/forgot-password", authController.showForgotPassword);
+app.post("/forgot-password", authController.forgotPassword);
+
+app.get("/reset-password/:token", authController.showResetPassword);
+app.post("/reset-password/:token", authController.resetPassword);
 
 /* Profile routes (your existing controller) */
 app.get("/profile", checkAuthenticated, profileController.showProfile);
@@ -584,9 +590,9 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
   }
 
   try {
-    // Check account balance and ID
+    // Check account balance, ID, and status
     const accountResult = await new Promise((resolve, reject) => {
-      db.query('SELECT accountId, balance FROM accounts WHERE userId = ?', [userId], (err, results) => {
+      db.query('SELECT a.accountId, a.balance, a.accountStatus, u.isFrozen FROM accounts a LEFT JOIN users u ON a.userId = u.userId WHERE a.userId = ?', [userId], (err, results) => {
         if (err) reject(err);
         else resolve(results);
       });
@@ -594,6 +600,19 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
     
     if (accountResult.length === 0) {
       return res.status(404).json({ error: 'Account not found' });
+    }
+
+    // Check if account is frozen
+    if (accountResult[0].isFrozen) {
+      return res.status(403).json({ error: 'Your account is frozen. You cannot trade.' });
+    }
+
+    // Check if account is approved (block pending and rejected)
+    if (accountResult[0].accountStatus !== 'approved') {
+      if (accountResult[0].accountStatus === 'rejected') {
+        return res.status(403).json({ error: 'Your account has been rejected. You cannot trade.' });
+      }
+      return res.status(403).json({ error: 'Your account is pending approval. You cannot trade until approved.' });
     }
 
     const accountId = accountResult[0].accountId;
@@ -802,6 +821,18 @@ app.post("/admin/users/delete/:id", checkAdmin, adminController.deleteUser);
 
 app.post("/admin/users/freeze/:id", checkAdmin, adminController.freezeUser);
 app.post("/admin/users/unfreeze/:id", checkAdmin, adminController.unfreezeUser);
+
+// Account approval routes
+app.get("/admin/accounts", checkAdmin, adminController.listPendingAccounts);
+app.post("/admin/accounts/approve/:id", checkAdmin, adminController.approveAccount);
+app.post("/admin/accounts/reject/:id", checkAdmin, adminController.rejectAccount);
+
+// Purchase reports routes
+app.get("/admin/reports", checkAdmin, reportsController.listPurchaseReports);
+app.get("/admin/reports/user/:userId", checkAdmin, reportsController.getUserDetailedReport);
+app.get("/admin/reports/export", checkAdmin, reportsController.exportReportsCSV);
+app.post("/admin/reports/clear-transactions", checkAdmin, reportsController.clearAllTransactions);
+app.post("/api/reports/check-threshold", reportsController.checkUserThreshold);
 
 /* Server */
 const PORT = process.env.PORT || 3000;

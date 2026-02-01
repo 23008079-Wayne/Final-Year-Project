@@ -167,8 +167,8 @@ CREATE TABLE `accounts` (
 INSERT INTO `accounts`
   (`userId`,`accountNumber`,`accountType`,`accountStatus`,`balance`,`totalInvested`,`totalReturns`,`currency`)
 VALUES
-  (5,'ACC-000005','personal','active',100000.00,0.00,0.00,'USD'),
-  (5,'PAPER-000005','paper','active',100000.00,0.00,0.00,'USD')
+  (5,'ACC-000005','personal','approved',100000.00,0.00,0.00,'USD'),
+  (5,'PAPER-000005','paper','approved',100000.00,0.00,0.00,'USD')
 ON DUPLICATE KEY UPDATE
   `accountStatus` = VALUES(`accountStatus`),
   `balance` = VALUES(`balance`),

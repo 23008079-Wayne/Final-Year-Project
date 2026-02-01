@@ -135,39 +135,7 @@
               placeholder="Enter your address"><%= userProfile.address || '' %></textarea>
           </div>
 
-          <!-- MetaMask Wallet -->
-          <div class="mb-4">
-            <label class="form-label">MetaMask Wallet Address</label>
-            <div class="input-group">
-              <input 
-                type="text" 
-                name="walletAddress" 
-                id="walletInput"
-                class="form-control"
-                pattern="^0x[a-fA-F0-9]{40}$"
-                title="Valid Ethereum wallet address (0x followed by 40 hex characters)"
-                value="<%= userProfile.walletAddress || '' %>"
-                placeholder="0x... (paste your MetaMask wallet address)"
-                readonly>
-              <button class="btn btn-success" type="button" id="connectWalletBtn" style="font-weight: 600;">
-                <i class="fas fa-wallet"></i> Connect MetaMask
-              </button>
-              <button class="btn btn-danger" type="button" id="removeWalletBtn" style="display: none; font-weight: 600;">
-                <i class="fas fa-trash"></i> Remove
-              </button>
-            </div>
-            <small class="text-muted d-block mt-2">Optional: Connect your MetaMask wallet for blockchain features</small>
-            
-            <!-- Wallet Balance Section -->
-            <div id="walletBalanceSection" class="mt-3" style="display: none;">
-              <div class="card border-success">
-                <div class="card-header bg-success text-white">
-                  <h6 class="card-title mb-0">✓ Wallet Connected</h6>
-                </div>
-                <div class="card-body">
-                  <p class="mb-2"><small class="text-muted">Balance</small></p>
-                  <h4 class="mb-0"><strong id="walletBalance">--</strong> <span style="font-size: 0.8em; color: #666;">ETH</span></h4>
-                </div>
+
               </div>
             </div>
           </div>

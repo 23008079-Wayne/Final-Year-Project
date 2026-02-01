@@ -21,7 +21,20 @@
               <i class="fas fa-user-plus"></i> Register
             </a>
           </li>
+        <% } else if (currentUser.roleId === 2) { %>
+          <!-- Admin User View -->
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/dashboard">
+              <i class="fas fa-shield-alt"></i> Admin Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link btn btn-danger btn-sm text-white ms-2" href="/logout" style="text-decoration: none;">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </li>
         <% } else { %>
+          <!-- Regular User View -->
           <li class="nav-item">
             <a class="nav-link" href="/portfolio">
               <i class="fas fa-chart-line"></i> My Portfolio
@@ -47,19 +60,11 @@
               <i class="fas fa-user-circle"></i> My Profile
             </a>
           </li>
-          </li>
           <li class="nav-item">
             <a class="nav-link" href="/account">
               <i class="fas fa-briefcase"></i> My Account
             </a>
           </li>
-          <% if (currentUser.roleId === 2) { %>
-            <li class="nav-item">
-              <a class="nav-link" href="/admin/stocks">
-                <i class="fas fa-lock"></i> Manage Stocks
-              </a>
-            </li>
-          <% } %>
           <li class="nav-item">
             <a class="nav-link btn btn-danger btn-sm text-white ms-2" href="/logout" style="text-decoration: none;">
               <i class="fas fa-sign-out-alt"></i> Logout

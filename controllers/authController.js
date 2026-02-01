@@ -1,6 +1,7 @@
 // controllers/authController.js
 const bcrypt = require('bcrypt');
 const db = require('../db');
+const emailService = require('../services/emailService');
 
 // GET /register
 exports.showRegister = (req, res) => {
@@ -101,24 +102,24 @@ exports.register = async (req, res) => {
     const accountNumber = `ACC-${userId}-${Date.now()}`;
     const paperAccountNumber = `PAPER-${userId}-${Date.now()}`;
     
-    // Create Trading account
+    // Create Trading account (pending approval)
     await db
       .promise()
       .query(
         'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-        [userId, accountNumber, 'Trading', 'active', 0, 0, 0, 'USD']
+        [userId, accountNumber, 'Trading', 'pending', 0, 0, 0, 'USD']
       );
     
-    // Create Paper account with $100,000 starting balance
+    // Create Paper account with $100,000 starting balance (pending approval)
     await db
       .promise()
       .query(
         'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-        [userId, paperAccountNumber, 'paper', 'active', 100000, 0, 0, 'USD']
+        [userId, paperAccountNumber, 'paper', 'pending', 100000, 0, 0, 'USD']
       );
 
-    console.log("DEBUG: Accounts created (Trading + Paper), redirecting to login");
-    req.flash('success', 'Registration successful. Please login.');
+    console.log("DEBUG: Accounts created (Trading + Paper - pending approval), redirecting to login");
+    req.flash('success', 'Registration successful. Your account is pending admin approval.');
     res.redirect('/login');
 
   } catch (err) {
@@ -173,11 +174,73 @@ exports.login = async (req, res) => {
 
     if (!match) {
       console.log("DEBUG: Invalid password");
+      
+      // Track failed login attempt (optional - skip if columns don't exist)
+      try {
+        const [userRecord] = await db.promise().query(
+          'SELECT loginAttempts, lockedUntil FROM users WHERE username = ? OR email = ?',
+          [emailOrUsername, emailOrUsername]
+        );
+        
+        if (userRecord.length > 0) {
+          let attempts = (userRecord[0].loginAttempts || 0) + 1;
+          let lockedUntil = null;
+          
+          // Lock account after 5 failed attempts for 30 minutes
+          if (attempts >= 5) {
+            lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+            console.log("DEBUG: Account locked due to too many failed attempts");
+          }
+          
+          await db.promise().query(
+            'UPDATE users SET loginAttempts = ?, lockedUntil = ? WHERE username = ? OR email = ?',
+            [attempts, lockedUntil, emailOrUsername, emailOrUsername]
+          );
+        }
+      } catch (err) {
+        // Columns might not exist - that's ok, just continue
+        console.log("DEBUG: Note - loginAttempts/lockedUntil columns not found (optional feature)");
+      }
+      
       req.flash('error', 'Invalid credentials.');
       return res.redirect('/login');
     }
 
+    // Check if account is locked (optional - skip if columns don't exist)
+    try {
+      if (user.lockedUntil) {
+        const now = new Date();
+        if (now < new Date(user.lockedUntil)) {
+          console.log("DEBUG: Account is locked");
+          const remainingTime = Math.ceil((new Date(user.lockedUntil) - now) / 60000);
+          req.flash('error', `Account locked due to too many failed login attempts. Try again in ${remainingTime} minutes.`);
+          return res.redirect('/login');
+        } else {
+          // Unlock account
+          await db.promise().query(
+            'UPDATE users SET lockedUntil = NULL, loginAttempts = 0 WHERE userId = ?',
+            [user.userId]
+          );
+        }
+      }
+    } catch (err) {
+      // Columns might not exist - that's ok, just continue
+      console.log("DEBUG: Note - lockedUntil check skipped (optional feature)");
+    }
+
     console.log("DEBUG: Password matched, creating session...");
+    
+    // Reset login attempts on successful login (optional - skip if columns don't exist)
+    try {
+      await db.promise().query(
+        'UPDATE users SET loginAttempts = 0, lockedUntil = NULL WHERE userId = ?',
+        [user.userId]
+      );
+    } catch (err) {
+      // Columns might not exist - that's ok, just continue
+      console.log("DEBUG: Note - loginAttempts/lockedUntil columns not found (optional feature)");
+    }
+    
     req.session.user = {
       userId: user.userId,
       username: user.username,
@@ -185,6 +248,11 @@ exports.login = async (req, res) => {
       roleId: user.roleId,
       roleName: user.roleName
     };
+    
+    // Handle "Remember Me"
+    if (req.body.rememberMe) {
+      req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+    }
 
     // Check if user has an account, create one if not
     try {
@@ -201,16 +269,16 @@ exports.login = async (req, res) => {
         // Create Trading account
         await db.promise().query(
           'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-          [user.userId, accountNumber, 'Trading', 'active', 0, 0, 0, 'USD']
+          [user.userId, accountNumber, 'Trading', 'pending', 0, 0, 0, 'USD']
         );
         
         // Create Paper account with $100,000 starting balance
         await db.promise().query(
           'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-          [user.userId, paperAccountNumber, 'paper', 'active', 100000, 0, 0, 'USD']
+          [user.userId, paperAccountNumber, 'paper', 'pending', 100000, 0, 0, 'USD']
         );
         
-        console.log("DEBUG: Both Trading and Paper accounts created successfully");
+        console.log("DEBUG: Both Trading and Paper accounts created successfully (pending approval)");
       } else {
         // Check if paper account exists
         const [paperAccounts] = await db.promise().query(
@@ -223,9 +291,9 @@ exports.login = async (req, res) => {
           const paperAccountNumber = `PAPER-${user.userId}-${Date.now()}`;
           await db.promise().query(
             'INSERT INTO accounts (userId, accountNumber, accountType, accountStatus, balance, totalInvested, totalReturns, currency) VALUES (?,?,?,?,?,?,?,?)',
-            [user.userId, paperAccountNumber, 'paper', 'active', 100000, 0, 0, 'USD']
+            [user.userId, paperAccountNumber, 'paper', 'pending', 100000, 0, 0, 'USD']
           );
-          console.log("DEBUG: Paper account created successfully");
+          console.log("DEBUG: Paper account created successfully (pending approval)");
         }
       }
     } catch (err) {
@@ -260,4 +328,195 @@ exports.logout = (req, res) => {
     res.clearCookie('connect.sid');
     res.redirect('/');
   });
+};
+
+// GET /forgot-password
+exports.showForgotPassword = (req, res) => {
+  console.log("DEBUG: showForgotPassword() CALLED");
+  res.render('forgot-password', { title: 'Forgot Password' });
+};
+
+// POST /forgot-password
+exports.forgotPassword = async (req, res) => {
+  console.log("DEBUG: POST /forgot-password hit");
+  const { email } = req.body;
+
+  if (!email) {
+    req.flash('error', 'Please enter your email address.');
+    return res.redirect('/forgot-password');
+  }
+
+  try {
+    const [rows] = await db.promise().query(
+      'SELECT * FROM users WHERE email = ?',
+      [email]
+    );
+
+    if (rows.length === 0) {
+      // Don't reveal if email exists (security best practice)
+      req.flash('success', 'If an account exists with that email, a password reset link has been sent.');
+      return res.redirect('/login');
+    }
+
+    const user = rows[0];
+    const resetToken = require('crypto').randomBytes(32).toString('hex');
+    const resetTokenHash = require('crypto').createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Save reset token to database
+    try {
+      await db.promise().query(
+        'INSERT INTO password_resets (userId, token, tokenExpiry) VALUES (?,?,?) ON DUPLICATE KEY UPDATE token=?, tokenExpiry=?',
+        [user.userId, resetTokenHash, resetTokenExpiry, resetTokenHash, resetTokenExpiry]
+      );
+    } catch (err) {
+      // Table might not exist, create it
+      if (err.code === 'ER_NO_SUCH_TABLE') {
+        console.log("DEBUG: Creating password_resets table...");
+        await db.promise().query(`
+          CREATE TABLE password_resets (
+            resetId INT PRIMARY KEY AUTO_INCREMENT,
+            userId INT NOT NULL,
+            token VARCHAR(255) NOT NULL,
+            tokenExpiry DATETIME NOT NULL,
+            FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
+            UNIQUE KEY (userId)
+          )
+        `);
+        
+        await db.promise().query(
+          'INSERT INTO password_resets (userId, token, tokenExpiry) VALUES (?,?,?)',
+          [user.userId, resetTokenHash, resetTokenExpiry]
+        );
+      }
+    }
+
+    console.log("DEBUG: Password reset token generated for user:", user.username);
+    console.log("DEBUG: Reset link: /reset-password/" + resetToken);
+
+    // Send email with reset link
+    console.log("DEBUG: Sending password reset email to:", user.email);
+    const emailSent = await emailService.sendPasswordResetEmail(user.email, resetToken, user.username);
+    
+    if (emailSent) {
+      req.flash('success', 'Password reset link has been sent to your email. Please check your inbox.');
+    } else {
+      req.flash('error', 'Email could not be sent. Please try again later.');
+    }
+    
+    res.redirect('/login');
+
+  } catch (err) {
+    console.error("DEBUG: ERROR in forgotPassword():", err);
+    req.flash('error', 'Something went wrong. Please try again later.');
+    res.redirect('/forgot-password');
+  }
+};
+
+// GET /reset-password/:token
+exports.showResetPassword = async (req, res) => {
+  console.log("DEBUG: showResetPassword() CALLED");
+  console.log("DEBUG: req.params:", req.params);
+  const { token } = req.params;
+  console.log("DEBUG: Token extracted:", token);
+
+  if (!token) {
+    req.flash('error', 'Invalid reset link.');
+    return res.redirect('/login');
+  }
+
+  try {
+    const resetTokenHash = require('crypto').createHash('sha256').update(token).digest('hex');
+    
+    const [rows] = await db.promise().query(
+      'SELECT * FROM password_resets WHERE token = ? AND tokenExpiry > NOW()',
+      [resetTokenHash]
+    );
+
+    if (rows.length === 0) {
+      req.flash('error', 'Password reset link has expired or is invalid.');
+      return res.redirect('/login');
+    }
+
+    res.render('reset-password', { 
+      title: 'Reset Password',
+      token: token,
+      userId: rows[0].userId
+    });
+
+  } catch (err) {
+    console.error("DEBUG: ERROR in showResetPassword():", err);
+    req.flash('error', 'Something went wrong. Please try again.');
+    res.redirect('/login');
+  }
+};
+
+// POST /reset-password/:token
+exports.resetPassword = async (req, res) => {
+  console.log("DEBUG: POST /reset-password hit");
+  const { token } = req.params; // Get token from URL parameter
+  const { password, confirmPassword } = req.body;
+
+  console.log("DEBUG: Token from params:", token);
+  console.log("DEBUG: Password from body:", password ? "***" : "undefined");
+
+  if (!token) {
+    req.flash('error', 'Invalid reset link.');
+    return res.redirect('/login');
+  }
+
+  if (!password || !confirmPassword) {
+    req.flash('error', 'Please fill in all fields.');
+    return res.redirect('/reset-password/' + token);
+  }
+
+  if (password !== confirmPassword) {
+    req.flash('error', 'Passwords do not match.');
+    return res.redirect('/reset-password/' + token);
+  }
+
+  // Validate password strength
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    req.flash('error', 'Password must be at least 8 characters with uppercase, lowercase, number, and special character.');
+    return res.redirect('/reset-password/' + token);
+  }
+
+  try {
+    const resetTokenHash = require('crypto').createHash('sha256').update(token).digest('hex');
+    
+    const [rows] = await db.promise().query(
+      'SELECT * FROM password_resets WHERE token = ? AND tokenExpiry > NOW()',
+      [resetTokenHash]
+    );
+
+    if (rows.length === 0) {
+      req.flash('error', 'Password reset link has expired or is invalid.');
+      return res.redirect('/login');
+    }
+
+    const userId = rows[0].userId;
+    const hashedPassword = await require('bcrypt').hash(password, 10);
+
+    // Update password
+    await db.promise().query(
+      'UPDATE users SET password = ? WHERE userId = ?',
+      [hashedPassword, userId]
+    );
+
+    // Delete reset token
+    await db.promise().query(
+      'DELETE FROM password_resets WHERE userId = ?',
+      [userId]
+    );
+
+    console.log("DEBUG: Password reset successfully for user:", userId);
+    req.flash('success', 'Password reset successfully. You can now log in with your new password.');
+    res.redirect('/login');
+
+  } catch (err) {
+    console.error("DEBUG: ERROR in resetPassword():", err);
+    req.flash('error', 'Something went wrong. Please try again.');
+    res.redirect('/reset-password/' + token);
+  }
 };

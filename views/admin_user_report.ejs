@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head') %>
+  <style>
+    .dashboard-header {
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-card h6 {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card h3 {
+      color: var(--text-primary);
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .user-info-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .user-info-section h5 {
+      color: var(--primary-color);
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .info-label {
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.85rem;
+    }
+
+    .info-value {
+      color: var(--text-primary);
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .table-responsive {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .transactions-table {
+      background-color: #1a1a1a;
+      border: none;
+      margin-bottom: 0;
+    }
+
+    .transactions-table thead {
+      background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #444;
+    }
+
+    .transactions-table thead th {
+      border: none;
+      padding: 18px 15px;
+      color: #aaa;
+      font-size: 0.85rem;
+      background: transparent !important;
+    }
+
+    .transactions-table tbody {
+      background-color: #1a1a1a !important;
+    }
+
+    .transactions-table tbody tr {
+      border-bottom: 1px solid #333;
+      transition: all 0.3s ease;
+      background-color: #1a1a1a !important;
+    }
+
+    .transactions-table tbody tr:hover {
+      background-color: #252525 !important;
+      border-bottom-color: #444;
+    }
+
+    .transactions-table tbody td {
+      padding: 16px 15px;
+      color: #ccc;
+      vertical-align: middle;
+      border: none;
+      background-color: transparent !important;
+    }
+
+    .transactions-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .badge-buy {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+
+    .badge-sell {
+      background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .amount-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      color: #555;
+    }
+
+    .empty-state h5 {
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .back-btn {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 123, 255, 0.5);
+      color: white;
+    }
+
+    .transactions-header {
+      background: #0f172a;
+      padding: 1.5rem;
+    }
+
+    .transactions-header h5 {
+      margin: 0;
+      color: var(--text-primary);
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5 mb-5">
+    <div class="dashboard-header d-flex justify-content-between align-items-center">
+      <div>
+        <h1 style="margin: 0; color: var(--text-primary); font-size: 2.5rem;">
+          <i class="fas fa-chart-bar"></i> <%= user.username %> - Purchase Report
+        </h1>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Detailed transaction history and statistics</p>
+      </div>
+      <a href="/admin/reports" class="back-btn">
+        <i class="fas fa-arrow-left"></i> Back to Reports
+      </a>
+    </div>
+
+    <%- include('partials/messages') %>
+
+    <!-- User Information Section -->
+    <div class="user-info-section">
+      <h5>
+        <i class="fas fa-user-circle"></i> User Information
+      </h5>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Username</span>
+          <span class="info-value"><%= user.username %></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Email</span>
+          <span class="info-value"><%= user.email %></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Account Number</span>
+          <span class="info-value"><%= user.accountNumber || 'N/A' %></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Account Type</span>
+          <span class="info-value"><%= user.accountType || 'N/A' %></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Member Since</span>
+          <span class="info-value"><%= new Date(user.created_at).toLocaleDateString() %></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Purchase Statistics -->
+    <h3 style="color: var(--text-primary); margin-bottom: 1.5rem;">
+      <i class="fas fa-chart-line"></i> Purchase Statistics
+    </h3>
+    <div class="row mb-4">
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-days" style="color: var(--primary-color);"></i>
+            </div>
+            <h6>Last 30 Days</h6>
+            <h3>$<%= (stats.days30 || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-calendar-alt" style="color: var(--success-color);"></i>
+            </div>
+            <h6>Last 90 Days</h6>
+            <h3>$<%= (stats.days90 || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card">
+          <div class="card-body text-center">
+            <div class="stat-icon">
+              <i class="fas fa-infinity" style="color: var(--warning-color);"></i>
+            </div>
+            <h6>All Time</h6>
+            <h3>$<%= (stats.allTime || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction History -->
+    <h3 style="color: var(--text-primary); margin-bottom: 1.5rem;">
+      <i class="fas fa-list"></i> Transaction History
+    </h3>
+    <% if (transactions && transactions.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table transactions-table">
+          <thead>
+            <tr>
+              <th><i class="fas fa-barcode"></i> Symbol</th>
+              <th><i class="fas fa-exchange-alt"></i> Type</th>
+              <th><i class="fas fa-cubes"></i> Quantity</th>
+              <th><i class="fas fa-tag"></i> Price</th>
+              <th><i class="fas fa-dollar-sign"></i> Total Value</th>
+              <th><i class="fas fa-calendar"></i> Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% transactions.forEach(tx => { %>
+              <tr>
+                <td><strong style="color: #fff;"><%= tx.symbol %></strong></td>
+                <td>
+                  <span class="<%= tx.txType === 'BUY' ? 'badge-buy' : 'badge-sell' %>">
+                    <%= tx.txType %>
+                  </span>
+                </td>
+                <td><%= tx.qty %></td>
+                <td>$<%= parseFloat(tx.price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                <td>
+                  <span class="amount-badge">
+                    $<%= parseFloat(tx.value || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                  </span>
+                </td>
+                <td><%= new Date(tx.created_at).toLocaleDateString() %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <h5>No Transactions Found</h5>
+        <p>This user has no transaction history.</p>
+      </div>
+    <% } %>
+
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
