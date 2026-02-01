@@ -15,10 +15,10 @@ async function page(req, res) {
     if (!userId) return res.redirect('/login');
 
     const [rules] = await db.promise().query(
-      `SELECT alertId, symbol, alertType, targetPrice, isActive, createdAt
+      `SELECT alertId, symbol, alertType, targetPrice, isActive, created_at as createdAt
        FROM alert_rules 
        WHERE userId = ? 
-       ORDER BY createdAt DESC`,
+       ORDER BY created_at DESC`,
       [userId]
     );
 
@@ -41,10 +41,10 @@ async function listAlerts(req, res) {
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
     const [rules] = await db.promise().query(
-      `SELECT alertId, symbol, alertType, targetPrice, isActive, createdAt
+      `SELECT alertId, symbol, alertType, targetPrice, isActive, created_at as createdAt
        FROM alert_rules 
        WHERE userId = ? 
-       ORDER BY createdAt DESC`,
+       ORDER BY created_at DESC`,
       [userId]
     );
 
