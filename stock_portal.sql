@@ -167,8 +167,8 @@ CREATE TABLE `accounts` (
 INSERT INTO `accounts`
   (`userId`,`accountNumber`,`accountType`,`accountStatus`,`balance`,`totalInvested`,`totalReturns`,`currency`)
 VALUES
-  (5,'ACC-000005','personal','approved',100000.00,0.00,0.00,'USD'),
-  (5,'PAPER-000005','paper','approved',100000.00,0.00,0.00,'USD')
+  (5,'ACC-000005','personal','active',100000.00,0.00,0.00,'USD'),
+  (5,'PAPER-000005','paper','active',100000.00,0.00,0.00,'USD')
 ON DUPLICATE KEY UPDATE
   `accountStatus` = VALUES(`accountStatus`),
   `balance` = VALUES(`balance`),
@@ -211,6 +211,27 @@ CREATE TABLE `user_watchlist` (
   UNIQUE KEY `uniq_user_symbol` (`userId`, `symbol`),
   KEY `idx_watchlist_user` (`userId`),
   CONSTRAINT `fk_watchlist_user`
+    FOREIGN KEY (`userId`) REFERENCES `users` (`userId`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- =========================================================
+-- alert_rules
+-- =========================================================
+CREATE TABLE `alert_rules` (
+  `alertId` INT NOT NULL AUTO_INCREMENT,
+  `userId` INT NOT NULL,
+  `symbol` VARCHAR(16) NOT NULL,
+  `alertType` ENUM('above','below') NOT NULL,
+  `targetPrice` DECIMAL(12,4) NOT NULL,
+  `isActive` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`alertId`),
+  UNIQUE KEY `uniq_user_symbol_alert` (`userId`, `symbol`, `alertType`, `targetPrice`),
+  KEY `idx_alert_user` (`userId`),
+  KEY `idx_alert_active` (`isActive`),
+  CONSTRAINT `fk_alert_user`
     FOREIGN KEY (`userId`) REFERENCES `users` (`userId`)
     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
