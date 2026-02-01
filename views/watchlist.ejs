@@ -236,10 +236,13 @@
             try {
                 const response = await fetch(`/api/quote/${symbol}`);
                 const data = await response.json();
-                const price = data.price || data.c || 0;
-                const change = data.change || data.d || 0;
-                const changePercent = data.changePercent || data.dp || 0;
-                const currency = data.currency || 'USD';
+                
+                // Handle nested quote object from API: { symbol, quote: { c, d, dp }, stale, source }
+                const quoteObj = data.quote || data;
+                const price = quoteObj.c || quoteObj.price || 0;
+                const change = quoteObj.d || quoteObj.change || 0;
+                const changePercent = quoteObj.dp || quoteObj.changePercent || 0;
+                const currency = quoteObj.currency || 'USD';
 
                 const priceEl = document.getElementById(`price-${symbol}`);
                 const changeEl = document.getElementById(`change-${symbol}`);
@@ -386,9 +389,10 @@
                 const quoteData = await quoteResponse.json();
                 console.log(`Quote data received:`, quoteData);
                 
-                // Check if price is valid (use price or c as fallback from different API formats)
-                const price = quoteData.price || quoteData.c;
-                if (!price || price === 0 || !Number.isFinite(price)) {
+                // Handle nested quote object: { symbol, quote: { c, d, dp }, stale, source }
+                const quoteObj = quoteData.quote || quoteData;
+                const price = quoteObj.c || quoteObj.price;
+                if (price === null || price === undefined || !Number.isFinite(price) || price <= 0) {
                     alert(`Unable to fetch price data for "${symbol}". Please try again or check that the symbol is valid.`);
                     return;
                 }
@@ -604,17 +608,20 @@
                     `;
                 }
 
-                // News Section
                 if (articles && articles.length > 0) {
                     html += `<h3 style="color: #00FF88; margin-top: 30px; margin-bottom: 15px;">📰 Latest News (${articles.length} articles)</h3>`;
                     
                     html += articles.slice(0, 8).map(article => {
-                        const url = article.url || article.link || '#';
-                        const isValidUrl = url && (url.startsWith('http://') || url.startsWith('https://'));
-                        const source = article.source || article.publisher || 'Financial News';
+                        // Get the actual URL from the article data (don't create fallback)
+                        const url = article.url || article.link || '';
+                        
+                        // Only consider it a valid link if it actually exists and is a proper URL
+                        const isValidUrl = url && url.trim().length > 0 && (url.startsWith('http://') || url.startsWith('https://'));
+                        
+                        const source = article.source?.name || article.source || article.publisher || article.author || 'Financial News';
                         const headline = article.headline || article.title || 'Market Update';
-                        const summary = article.summary || article.description || 'Latest financial news';
-                        const time = article.datetime ? new Date(article.datetime).toLocaleDateString() : 'Recently';
+                        const summary = article.summary || article.description || article.content || 'Latest financial news';
+                        const time = article.datetime ? new Date(article.datetime).toLocaleDateString() : article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : 'Recently';
                         
                         return `
                             <div style="border-left: 4px solid #00D9FF; background: #f9f9f9; padding: 15px; margin-bottom: 12px; border-radius: 4px; transition: all 0.3s ease;" onmouseenter="this.style.background='#f0f9ff'; this.style.boxShadow='0 4px 12px rgba(0,217,255,0.2)';" onmouseleave="this.style.background='#f9f9f9'; this.style.boxShadow='none';">
