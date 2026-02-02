@@ -75,6 +75,32 @@ async function getPaperHoldingQty(userId, symbol) {
   return rows[0] ? Number(rows[0].qty) : 0;
 }
 
+// Update totalInvested and totalReturns for paper account
+async function updateAccountTotals(userId, accountId) {
+  const holdings = await listPaperHoldings(userId);
+  
+  const totalInvested = holdings.reduce(
+    (s, h) => s + Number(h.qty) * Number(h.avgPrice),
+    0
+  );
+
+  let marketValue = 0;
+  for (const h of holdings) {
+    try {
+      const { quote } = await quoteController.getQuoteABCached(h.symbol);
+      const live = Number(quote?.c);
+      if (Number.isFinite(live)) marketValue += live * Number(h.qty);
+    } catch {}
+  }
+
+  const totalReturns = money(marketValue - totalInvested);
+  
+  await db.promise().query(
+    "UPDATE accounts SET totalInvested = ?, totalReturns = ? WHERE accountId = ?",
+    [money(totalInvested), totalReturns, accountId]
+  );
+}
+
 /* =========================
    PAGE
 ========================= */
@@ -171,6 +197,9 @@ async function createTrade(req, res) {
         );
 
         await conn.commit();
+        
+        // Update account totals
+        await updateAccountTotals(userId, acct.accountId);
       } catch (e) {
         await conn.rollback();
         throw e;
@@ -213,6 +242,9 @@ async function createTrade(req, res) {
       );
 
       await conn.commit();
+      
+      // Update account totals
+      await updateAccountTotals(userId, acct.accountId);
     } catch (e) {
       await conn.rollback();
       throw e;

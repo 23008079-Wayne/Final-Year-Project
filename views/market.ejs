@@ -416,6 +416,14 @@
   </script>
 
   <script>
+    // Purchase button - navigate to trade page with symbol
+    document.getElementById("buyBtn").addEventListener("click", function() {
+      const symbol = "<%= symbol %>";
+      window.location.href = `/trade?symbol=${encodeURIComponent(symbol)}`;
+    });
+  </script>
+
+  <script>
     // Load live quote using your A+B+fallback endpoint
     (function(){
       const symbol = "<%= symbol %>";

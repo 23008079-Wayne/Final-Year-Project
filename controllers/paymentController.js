@@ -20,9 +20,9 @@ async function getPortfolio(req, res) {
       return res.status(400).json({ error: "User ID required" });
     }
 
-    // Get all holdings for this user
+    // Get all REAL holdings for this user (not paper trading)
     const holdings = await new Promise((resolve, reject) => {
-      db.query('SELECT * FROM user_holdings WHERE userId = ?', [userId], (err, results) => {
+      db.query('SELECT * FROM user_holdings WHERE userId = ? AND mode = "REAL"', [userId], (err, results) => {
         if (err) reject(err);
         else resolve(results || []);
       });
@@ -43,9 +43,9 @@ async function getPortfolio(req, res) {
       totalValue += value;
     }
 
-    // Get account cash balance
+    // Get account cash balance (personal/real account only)
     const accountResult = await new Promise((resolve, reject) => {
-      db.query('SELECT balance FROM accounts WHERE userId = ? LIMIT 1', [userId], (err, results) => {
+      db.query('SELECT balance FROM accounts WHERE userId = ? AND accountType = "personal" LIMIT 1', [userId], (err, results) => {
         if (err) reject(err);
         else resolve(results?.[0] || { balance: 10000 });
       });
@@ -405,9 +405,9 @@ async function processPayment(req, res) {
       return res.status(400).json({ error: "Insufficient cash" });
     }
 
-    // Get or create holding for this stock
+    // Get or create holding for this stock (REAL mode)
     const holding = await new Promise((resolve, reject) => {
-      db.query('SELECT * FROM user_holdings WHERE userId = ? AND symbol = ?', 
+      db.query('SELECT * FROM user_holdings WHERE userId = ? AND symbol = ? AND mode = "REAL"', 
         [user, symbol.toUpperCase()], 
         (err, results) => {
           if (err) reject(err);
@@ -422,7 +422,7 @@ async function processPayment(req, res) {
       const newAvgPrice = (oldValue + newValue) / (holding.qty + parseInt(shares));
 
       await new Promise((resolve, reject) => {
-        db.query('UPDATE user_holdings SET qty = qty + ?, avgPrice = ? WHERE userId = ? AND symbol = ?', 
+        db.query('UPDATE user_holdings SET qty = qty + ?, avgPrice = ? WHERE userId = ? AND symbol = ? AND mode = "REAL"', 
           [parseInt(shares), newAvgPrice, user, symbol.toUpperCase()], 
           (err) => {
             if (err) reject(err);
@@ -430,9 +430,9 @@ async function processPayment(req, res) {
           });
       });
     } else {
-      // Create new holding
+      // Create new REAL holding
       await new Promise((resolve, reject) => {
-        db.query('INSERT INTO user_holdings (userId, symbol, qty, avgPrice) VALUES (?, ?, ?, ?)', 
+        db.query('INSERT INTO user_holdings (userId, symbol, qty, avgPrice, mode) VALUES (?, ?, ?, ?, "REAL")', 
           [user, symbol.toUpperCase(), parseInt(shares), price], 
           (err) => {
             if (err) reject(err);
@@ -441,9 +441,9 @@ async function processPayment(req, res) {
       });
     }
 
-    // Record transaction in stock_transactions
+    // Record transaction in stock_transactions with REAL mode
     await new Promise((resolve, reject) => {
-      db.query('INSERT INTO stock_transactions (userId, symbol, txType, qty, price, dataSource, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())', 
+      db.query('INSERT INTO stock_transactions (userId, symbol, txType, qty, price, dataSource, mode, created_at) VALUES (?, ?, ?, ?, ?, ?, "REAL", NOW())', 
         [user, symbol.toUpperCase(), 'BUY', parseInt(shares), price, 'stripe'], 
         (err) => {
           if (err) reject(err);
@@ -451,9 +451,9 @@ async function processPayment(req, res) {
         });
     });
 
-    // Deduct cash from account
+    // Deduct cash from personal account
     await new Promise((resolve, reject) => {
-      db.query('UPDATE accounts SET balance = balance - ? WHERE userId = ?', 
+      db.query('UPDATE accounts SET balance = balance - ? WHERE userId = ? AND accountType = "personal"', 
         [totalCost, user], 
         (err) => {
           if (err) reject(err);
@@ -500,9 +500,9 @@ async function sellShares(req, res) {
       return res.status(404).json({ error: "Stock not found" });
     }
 
-    // Get current holding
+    // Get current REAL holding
     const holding = await new Promise((resolve, reject) => {
-      db.query('SELECT * FROM user_holdings WHERE userId = ? AND symbol = ?', 
+      db.query('SELECT * FROM user_holdings WHERE userId = ? AND symbol = ? AND mode = "REAL"', 
         [user, symbol.toUpperCase()], 
         (err, results) => {
           if (err) reject(err);
@@ -516,10 +516,10 @@ async function sellShares(req, res) {
 
     const totalProceeds = price * parseInt(shares);
 
-    // Update holding or delete if zero
+    // Update REAL holding or delete if zero
     if (holding.qty - parseInt(shares) <= 0) {
       await new Promise((resolve, reject) => {
-        db.query('DELETE FROM user_holdings WHERE userId = ? AND symbol = ?', 
+        db.query('DELETE FROM user_holdings WHERE userId = ? AND symbol = ? AND mode = "REAL"', 
           [user, symbol.toUpperCase()], 
           (err) => {
             if (err) reject(err);
@@ -528,7 +528,7 @@ async function sellShares(req, res) {
       });
     } else {
       await new Promise((resolve, reject) => {
-        db.query('UPDATE user_holdings SET qty = qty - ? WHERE userId = ? AND symbol = ?', 
+        db.query('UPDATE user_holdings SET qty = qty - ? WHERE userId = ? AND symbol = ? AND mode = "REAL"', 
           [parseInt(shares), user, symbol.toUpperCase()], 
           (err) => {
             if (err) reject(err);
@@ -537,9 +537,9 @@ async function sellShares(req, res) {
       });
     }
 
-    // Record transaction
+    // Record REAL transaction
     await new Promise((resolve, reject) => {
-      db.query('INSERT INTO stock_transactions (userId, symbol, txType, qty, price, dataSource, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())', 
+      db.query('INSERT INTO stock_transactions (userId, symbol, txType, qty, price, dataSource, mode, created_at) VALUES (?, ?, ?, ?, ?, ?, "REAL", NOW())', 
         [user, symbol.toUpperCase(), 'SELL', parseInt(shares), price, 'manual'], 
         (err) => {
           if (err) reject(err);
@@ -547,9 +547,9 @@ async function sellShares(req, res) {
         });
     });
 
-    // Add cash to account
+    // Add cash to personal account
     await new Promise((resolve, reject) => {
-      db.query('UPDATE accounts SET balance = balance + ? WHERE userId = ?', 
+      db.query('UPDATE accounts SET balance = balance + ? WHERE userId = ? AND accountType = "personal"', 
         [totalProceeds, user], 
         (err) => {
           if (err) reject(err);

@@ -517,14 +517,14 @@ app.get("/api/user-balance", checkAuthenticated, async (req, res) => {
   try {
     const userId = req.session.user.userId;
     const result = await new Promise((resolve, reject) => {
-      db.query('SELECT balance FROM accounts WHERE userId = ?', [userId], (err, results) => {
+      db.query('SELECT balance FROM accounts WHERE userId = ? AND accountType = "personal"', [userId], (err, results) => {
         if (err) reject(err);
         else resolve(results);
       });
     });
     
     if (result.length === 0) {
-      return res.status(404).json({ error: 'Account not found' });
+      return res.status(404).json({ error: 'Personal account not found' });
     }
 
     res.json({ balance: result[0].balance });
@@ -539,7 +539,7 @@ app.get("/api/user-holdings", checkAuthenticated, async (req, res) => {
     const userId = req.session.user.userId;
     const result = await new Promise((resolve, reject) => {
       db.query(
-        'SELECT symbol, qty, avgPrice FROM user_holdings WHERE userId = ? AND qty > 0 ORDER BY symbol ASC',
+        'SELECT symbol, qty, avgPrice FROM user_holdings WHERE userId = ? AND mode = "REAL" AND qty > 0 ORDER BY symbol ASC',
         [userId],
         (err, results) => {
           if (err) reject(err);
@@ -596,9 +596,9 @@ app.post("/api/execute-trade", checkAuthenticated, async (req, res) => {
   }
 
   try {
-    // Check account balance, ID, and status
+    // Check account balance, ID, and status (use personal account for real trading)
     const accountResult = await new Promise((resolve, reject) => {
-      db.query('SELECT a.accountId, a.balance, a.accountStatus, u.isFrozen FROM accounts a LEFT JOIN users u ON a.userId = u.userId WHERE a.userId = ?', [userId], (err, results) => {
+      db.query('SELECT a.accountId, a.balance, a.accountStatus, u.isFrozen FROM accounts a LEFT JOIN users u ON a.userId = u.userId WHERE a.userId = ? AND a.accountType = "personal"', [userId], (err, results) => {
         if (err) reject(err);
         else resolve(results);
       });

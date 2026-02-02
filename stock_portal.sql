@@ -300,6 +300,7 @@ VALUES
 
 -- =========================================================
 -- Trigger: MODE-aware holdings sync (source of truth = transactions)
+-- Handles both REAL and PAPER mode
 -- =========================================================
 DROP TRIGGER IF EXISTS `trg_stock_tx_after_insert`;
 DELIMITER $$
@@ -322,29 +323,30 @@ BEGIN
     AND `mode` = NEW.`mode`
   LIMIT 1;
 
-  IF existing_qty IS NULL THEN
-    IF NEW.`txType` = 'BUY' THEN
+  IF NEW.`txType` = 'BUY' THEN
+    -- BUY: Always add to holdings
+    IF existing_qty IS NULL THEN
       INSERT INTO `user_holdings` (`userId`,`symbol`,`qty`,`avgPrice`,`mode`)
       VALUES (NEW.`userId`, UPPER(NEW.`symbol`), NEW.`qty`, NEW.`price`, NEW.`mode`)
       ON DUPLICATE KEY UPDATE
         `qty` = `qty` + VALUES(`qty`),
-        `avgPrice` = VALUES(`avgPrice`),
+        `avgPrice` = ((`qty` * `avgPrice`) + (VALUES(`qty`) * NEW.`price`)) / (`qty` + VALUES(`qty`)),
         `mode` = VALUES(`mode`);
-    END IF;
-  ELSE
-    IF NEW.`txType` = 'BUY' THEN
+    ELSE
       UPDATE `user_holdings`
       SET
-        `avgPrice` = CASE
-          WHEN (existing_qty + NEW.`qty`) > 0
-          THEN ((existing_qty * existing_avg) + (NEW.`qty` * NEW.`price`)) / (existing_qty + NEW.`qty`)
-          ELSE `avgPrice`
-        END,
+        `avgPrice` = ((existing_qty * existing_avg) + (NEW.`qty` * NEW.`price`)) / (existing_qty + NEW.`qty`),
         `qty` = existing_qty + NEW.`qty`
       WHERE `userId` = NEW.`userId`
         AND `symbol` = UPPER(NEW.`symbol`)
         AND `mode` = NEW.`mode`;
-    ELSEIF NEW.`txType` = 'SELL' THEN
+    END IF;
+  ELSEIF NEW.`txType` = 'SELL' THEN
+    -- SELL: Reduce holdings (or create with negative if needed)
+    IF existing_qty IS NULL THEN
+      INSERT INTO `user_holdings` (`userId`,`symbol`,`qty`,`avgPrice`,`mode`)
+      VALUES (NEW.`userId`, UPPER(NEW.`symbol`), -NEW.`qty`, NEW.`price`, NEW.`mode`);
+    ELSE
       UPDATE `user_holdings`
       SET `qty` = GREATEST(existing_qty - NEW.`qty`, 0)
       WHERE `userId` = NEW.`userId`
