@@ -4,7 +4,7 @@ const mysql = require('mysql2');
 const db = mysql.createConnection({
   host: '127.0.0.1',
   user: 'root',          // change if needed
-  password: '',          // change if needed
+  password: 'Republic_C207',          // change if needed
   database: 'stock_portal'
 });
 

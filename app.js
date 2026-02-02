@@ -173,6 +173,7 @@ app.get("/paper-trading", checkAuthenticated, paperTradingController.page);
 app.post("/api/paper-trades", checkAuthenticated, paperTradingController.createTrade);
 app.delete("/api/paper-holdings/:symbol", checkAuthenticated, paperTradingController.deleteHolding);
 app.get("/api/paper-summary", checkAuthenticated, paperTradingController.summary);
+app.get ("/api/portfolio-export.csv", checkAuthenticated, portfolioController.exportCsv);
 
 
 

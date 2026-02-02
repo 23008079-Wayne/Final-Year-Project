@@ -11,9 +11,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    .p-btn{ padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#111; color:#eee; cursor:pointer; text-decoration:none !important; display:inline-flex; align-items:center; gap:8px; }
+    .p-btn{ padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#111; color:#eee; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
     .p-btn.primary{ background:#00eaff; color:#000; border-color:transparent; font-weight:800; }
-    .p-btn:hover { opacity: 0.9; }
     .risk-bad{ color:#ffcc00; font-weight:800; }
   </style>
 </head>
@@ -58,7 +57,8 @@
               <div class="subtext">Unrealised P/L since purchase (updates with live prices)</div>
 
               <div style="margin-top:14px;">
-                <a href="/paper-trading" class="p-btn primary" style="text-decoration:none;">Go to Paper Trading →</a>
+                <a href="/paper-trading" class="p-btn primary">Go to Paper Trading →</a>
+                <a class="p-btn" href="/api/portfolio-export.csv">Export CSV</a>
               </div>
             </div>
 
@@ -93,6 +93,7 @@
                 <% if (holdings.length === 0) { %>
                   <tr>
                     <td colspan="7" class="subtext">No holdings yet. Use Paper Trading to create positions.</td>
+                    <a class="p-btn" href="/api/portfolio-export.csv">Export CSV</a>
                   </tr>
                 <% } else { %>
                   <% holdings.forEach(item => {

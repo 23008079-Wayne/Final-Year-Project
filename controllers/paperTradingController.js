@@ -94,7 +94,7 @@ async function page(req, res) {
     const holdingsList = await listPaperHoldings(userId);
     const txs = await listPaperTxs(userId);
 
-    // ⚠️ filename must match views/papertrading.ejs
+
     res.render("papertrading", {
       title: "Paper Trading",
       account: {

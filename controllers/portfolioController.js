@@ -11,6 +11,7 @@
 "use strict";
 
 const db = require("../db");
+const { exportReportsCSV } = require("./reportsController");
 
 let quoteController;
 
@@ -418,6 +419,119 @@ async function deleteHolding(req, res) {
   }
 }
 
+function escapeCsv(value) {
+  // Make CSV safe: wrap with quotes if needed, escape quotes
+  const s = value === null || value === undefined ? "" : String(value);
+  const mustQuote = /[",\n\r]/.test(s);
+  const escaped = s.replace(/"/g, '""');
+  return mustQuote ? `"${escaped}"` : escaped;
+}
+
+async function exportCsv(req, res) {
+  const userId = req.session.user?.userId;
+
+  // If you want: block export for guests
+  if (!userId) {
+    return res.status(401).send("Not logged in");
+  }
+
+  const holdingsFromDb = await getUserHoldingsFromDb(userId);
+  const holdings = holdingsFromDb || DEMO_PORTFOLIO_HOLDINGS;
+
+  const userRiskTolRaw = await getUserRiskTolerance(userId);
+  const userRiskTol = normalizeUserRisk(userRiskTolRaw);
+
+  try {
+    let totalValue = 0;
+
+    // CSV header
+    const header = [
+      "Symbol",
+      "Qty",
+      "AvgPrice",
+      "LivePrice",
+      "MarketValue",
+      "UnrealisedPL",
+      "UnrealisedPLPercent",
+      "StockRisk",
+      "UserRiskTolerance",
+      "RiskWarning",
+      "QuoteSource",
+      "IsStale"
+    ];
+
+    const rows = [header];
+
+    for (const h of holdings) {
+      const sym = String(h.symbol || "").toUpperCase();
+      const qty = Number(h.qty || 0);
+      const avg = Number(h.avg || 0);
+
+      // live price (fallback to avg)
+      let livePriceToUse = Number.isFinite(avg) ? avg : 0;
+      let sourceToUse = "avg-fallback";
+      let staleToUse = true;
+
+      try {
+        const { quote, stale, source } = await quoteController.getQuoteABCached(sym);
+        const livePrice = Number(quote?.c);
+        if (Number.isFinite(livePrice)) {
+          livePriceToUse = livePrice;
+          sourceToUse = source;
+          staleToUse = !!stale;
+        }
+      } catch {
+        // ignore
+      }
+
+      const marketValue = Number.isFinite(livePriceToUse) ? livePriceToUse * qty : 0;
+      totalValue += marketValue;
+
+      const pl = (livePriceToUse - avg) * qty;
+      const cost = avg * qty;
+      const plPercent = cost > 0 ? (pl / cost) * 100 : 0;
+
+      // Risk (your existing logic)
+      const stockRisk = await quoteController.estimateStockRiskLevel(sym);
+      const riskWarning =
+        userRiskTol && stockRisk ? riskRank(stockRisk) > riskRank(userRiskTol) : false;
+
+      rows.push([
+        sym,
+        qty,
+        avg.toFixed(4),
+        Number(livePriceToUse).toFixed(4),
+        Number(marketValue).toFixed(2),
+        Number(pl).toFixed(2),
+        Number(plPercent).toFixed(2),
+        stockRisk || "",
+        userRiskTol || "",
+        riskWarning ? "YES" : "NO",
+        sourceToUse,
+        staleToUse ? "YES" : "NO"
+      ]);
+    }
+
+    // Add a summary row at bottom (optional)
+    rows.push([]);
+    rows.push(["TOTAL_VALUE", "", "", "", Number(totalValue).toFixed(2)]);
+
+    const csv = rows
+      .map((r) => r.map(escapeCsv).join(","))
+      .join("\n");
+
+    const filename = `portfolio_user_${userId}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    return res.status(200).send(csv);
+  } catch (e) {
+    console.error("exportCsv error:", e?.message || e);
+    return res.status(500).send("Failed to export CSV");
+  }
+}
+
+
 module.exports = {
   init,
   page,
@@ -427,5 +541,6 @@ module.exports = {
   listHoldings,
   createHolding,
   updateHolding,
-  deleteHolding
+  deleteHolding,
+  exportCsv
 };
