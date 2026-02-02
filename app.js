@@ -39,6 +39,7 @@ const alertsController = require("./controllers/alertsController");
 const { getCalendarEvents } = require("./controllers/economicCalendarController");
 const newsController = require("./controllers/newsController");
 const sentimentController = require("./controllers/sentimentController");
+const chatbotController = require("./controllers/chatbotController");
 
 
 // Middleware
@@ -212,6 +213,10 @@ app.delete("/api/alerts/:alertId", checkAuthenticated, alertsController.deleteAl
 
 // Economic calendar API (tab)
 app.get("/api/economic-calendar", getCalendarEvents);
+
+// Chatbot API
+app.post("/api/chatbot/chat", chatbotController.chat);
+
 /* Trade route */
 app.get("/trade", checkAuthenticated, (req, res) => {
   res.render("trade", { title: "Trade", currentUser: res.locals.currentUser });
